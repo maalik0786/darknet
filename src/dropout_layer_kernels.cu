@@ -15,8 +15,8 @@ __global__ void yoloswag420blazeit360noscope(float *input, int size, float *rand
 void forward_dropout_layer_gpu(dropout_layer layer, network_state state)
 {
     if (!state.train) return;
-    int iteration_num = (*state.net.seen) / (state.net.batch*state.net.subdivisions);
-    //if (iteration_num < state.net.burn_in) return;
+    const int iteration_num = (*state.net.seen) / (state.net.batch*state.net.subdivisions);
+    if (iteration_num < state.net.burn_in) return;
 
 
     int size = layer.inputs*layer.batch;
@@ -36,8 +36,8 @@ void forward_dropout_layer_gpu(dropout_layer layer, network_state state)
 void backward_dropout_layer_gpu(dropout_layer layer, network_state state)
 {
     if(!state.delta) return;
-    int iteration_num = (*state.net.seen) / (state.net.batch*state.net.subdivisions);
-    //if (iteration_num < state.net.burn_in) return;
+    const int iteration_num = (*state.net.seen) / (state.net.batch*state.net.subdivisions);
+    if (iteration_num < state.net.burn_in) return;
 
     int size = layer.inputs*layer.batch;
 

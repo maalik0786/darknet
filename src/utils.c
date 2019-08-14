@@ -117,10 +117,9 @@ float find_float_arg(int argc, char **argv, char *arg, float def)
     return def;
 }
 
-char *find_char_arg(int argc, char **argv, char *arg, char *def)
+char *find_char_arg(const int argc, char **argv, char *arg, char *def)
 {
-    int i;
-    for(i = 0; i < argc-1; ++i){
+    for(int i = 0; i < argc-1; ++i){
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)){
             def = argv[i+1];
@@ -430,9 +429,9 @@ int read_all_fail(int fd, char *buffer, size_t bytes)
 
 int write_all_fail(int fd, char *buffer, size_t bytes)
 {
-    size_t n = 0;
+    int n = 0;
     while(n < bytes){
-        size_t next = write(fd, buffer + n, bytes-n);
+        int next = write(fd, buffer + n, bytes-n);
         if(next <= 0) return 1;
         n += next;
     }

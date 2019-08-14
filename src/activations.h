@@ -29,7 +29,7 @@ void gradient_array_swish_ongpu(float *x, int n, float *sigmoid_gpu, float *delt
 
 static inline float stair_activate(float x)
 {
-    int n = floorf(x);
+    const int n = floorf(x);
     if (n%2 == 0) return floorf(x/2.f);
     else return (x - n) + floorf(x/2.f);
 }

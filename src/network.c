@@ -421,9 +421,8 @@ int recalculate_workspace_size(network *net)
     cuda_set_device(net->gpu_index);
     if (gpu_index >= 0) cuda_free(net->workspace);
 #endif
-    int i;
     size_t workspace_size = 0;
-    for (i = 0; i < net->n; ++i) {
+    for (int i = 0; i < net->n; ++i) {
         layer l = net->layers[i];
         //printf(" %d: layer = %d,", i, l.type);
         if (l.type == CONVOLUTIONAL) {
@@ -457,8 +456,7 @@ int recalculate_workspace_size(network *net)
 void set_batch_network(network *net, int b)
 {
     net->batch = b;
-    int i;
-    for(i = 0; i < net->n; ++i){
+    for(int i = 0; i < net->n; ++i){
         net->layers[i].batch = b;
 
 #ifdef CUDNN
@@ -577,14 +575,14 @@ int resize_network(network *net, int w, int h)
     return 0;
 }
 
-int get_network_output_size(network net)
+int get_network_output_size(const network net)
 {
     int i;
     for(i = net.n-1; i > 0; --i) if(net.layers[i].type != COST) break;
     return net.layers[i].outputs;
 }
 
-int get_network_input_size(network net)
+int get_network_input_size(const network net)
 {
     return net.layers[0].inputs;
 }
@@ -748,16 +746,16 @@ void fill_network_boxes(network *net, int w, int h, float thresh, float hier, in
         if (l.type == REGION) {
             custom_get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets, letter);
             //get_region_detections(l, w, h, net->w, net->h, thresh, map, hier, relative, dets);
-            dets += l.w*l.h*l.n;
+            dets += l.h*l.w*l.n;
         }
         if (l.type == DETECTION) {
             get_detection_detections(l, w, h, thresh, dets);
-            dets += l.w*l.h*l.n;
+            dets += l.n*(l.w*l.h);
         }
     }
 }
 
-detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num, int letter)
+detection *get_network_boxes(network *net, const int w, const int h, const float thresh, const float hier, int *map, const int relative, int *num, int letter)
 {
     detection *dets = make_network_boxes(net, thresh, num);
     fill_network_boxes(net, w, h, thresh, hier, map, relative, dets, letter);
@@ -766,8 +764,7 @@ detection *get_network_boxes(network *net, int w, int h, float thresh, float hie
 
 void free_detections(detection *dets, int n)
 {
-    int i;
-    for (i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         free(dets[i].prob);
         if (dets[i].mask) free(dets[i].mask);
     }
@@ -1022,16 +1019,14 @@ void free_network(network net)
 
 void fuse_conv_batchnorm(network net)
 {
-    int j;
-    for (j = 0; j < net.n; ++j) {
+    for (int j = 0; j < net.n; ++j) {
         layer *l = &net.layers[j];
 
         if (l->type == CONVOLUTIONAL) {
             //printf(" Merges Convolutional-%d and batch_norm \n", j);
 
             if (l->batch_normalize) {
-                int f;
-                for (f = 0; f < l->n; ++f)
+                for (int f = 0; f < l->n; ++f)
                 {
                     //l->biases[f] = l->biases[f] - (double)l->scales[f] * l->rolling_mean[f] / (sqrt((double)l->rolling_variance[f]) + .000001f);
                     l->biases[f] = l->biases[f] - (double)l->scales[f] * l->rolling_mean[f] / (sqrt((double)l->rolling_variance[f] + .000001));

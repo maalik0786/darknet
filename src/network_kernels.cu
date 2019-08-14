@@ -479,11 +479,11 @@ float *network_predict_gpu(network net, float *input)
 {
     if (net.gpu_index != cuda_get_device())
         cuda_set_device(net.gpu_index);
-    int size = get_network_input_size(net) * net.batch;
+    auto size = get_network_input_size(net) * net.batch;
+    printf("network_predict_gpu size %d", size);
     network_state state;
     state.index = 0;
     state.net = net;
-    //state.input = cuda_make_array(input, size);   // memory will be allocated in the parse_network_cfg_custom()
     state.input = net.input_state_gpu;
     memcpy(net.input_pinned_cpu, input, size * sizeof(float));
     cuda_push_array(state.input, net.input_pinned_cpu, size);
@@ -491,7 +491,5 @@ float *network_predict_gpu(network net, float *input)
     state.train = 0;
     state.delta = 0;
     forward_network_gpu(net, state);
-    float *out = get_network_output_gpu(net);
-    //cuda_free(state.input);   // will be freed in the free_network()
-    return out;
+    return get_network_output_gpu(net);
 }

@@ -723,13 +723,12 @@ void save_image_jpg(image p, const char *name)
     save_image_options(p, name, JPG, 80);
 }
 
-void show_image_layers(image p, char *name)
+void show_image_layers(const image p, char *name)
 {
-    int i;
     char buff[256];
-    for(i = 0; i < p.c; ++i){
+    for(int i = 0; i < p.c; ++i){
         sprintf(buff, "%s - Layer %d", name, i);
-        image layer = get_image_layer(p, i);
+        const image layer = get_image_layer(p, i);
         show_image(layer, buff);
         free_image(layer);
     }
@@ -737,12 +736,12 @@ void show_image_layers(image p, char *name)
 
 void show_image_collapsed(image p, char *name)
 {
-    image c = collapse_image_layers(p, 1);
+    const image c = collapse_image_layers(p, 1);
     show_image(c, name);
     free_image(c);
 }
 
-image make_empty_image(int w, int h, int c)
+image make_empty_image(const int w, const int h, const int c)
 {
     image out;
     out.data = 0;
@@ -752,19 +751,18 @@ image make_empty_image(int w, int h, int c)
     return out;
 }
 
-image make_image(int w, int h, int c)
+image make_image(const int w, const int h, const int c)
 {
     image out = make_empty_image(w,h,c);
-    out.data = (float*)calloc(h * w * c, sizeof(float));
+    out.data = (float*) calloc(w * h * c, sizeof(float));
     return out;
 }
 
-image make_random_image(int w, int h, int c)
+image make_random_image(const int w, const int h, const int c)
 {
     image out = make_empty_image(w,h,c);
-    out.data = (float*)calloc(h * w * c, sizeof(float));
-    int i;
-    for(i = 0; i < w*h*c; ++i){
+    out.data = (float*)calloc(w * h * c, sizeof(float));
+    for(int i = 0; i < w*h*c; ++i){
         out.data[i] = (rand_normal() * .25) + .5;
     }
     return out;
@@ -1273,13 +1271,13 @@ float bilinear_interpolate(image im, float x, float y, int c)
     return val;
 }
 
-image resize_image(image im, int w, int h)
+image resize_image(const image im, const int w, const int h)
 {
-    image resized = make_image(w, h, im.c);
-    image part = make_image(w, im.h, im.c);
+    const image resized = make_image(w, h, im.c);
+    const image part = make_image(w, im.h, im.c);
     int r, c, k;
-    float w_scale = (float)(im.w - 1) / (w - 1);
-    float h_scale = (float)(im.h - 1) / (h - 1);
+    const float w_scale = (float)(im.w - 1) / (w - 1);
+    const float h_scale = (float)(im.h - 1) / (h - 1);
     for(k = 0; k < im.c; ++k){
         for(r = 0; r < im.h; ++r){
             for(c = 0; c < w; ++c){
@@ -1287,9 +1285,9 @@ image resize_image(image im, int w, int h)
                 if(c == w-1 || im.w == 1){
                     val = get_pixel(im, im.w-1, r, k);
                 } else {
-                    float sx = c*w_scale;
-                    int ix = (int) sx;
-                    float dx = sx - ix;
+                    const float sx = w_scale*c;
+                    const int ix = (int) sx;
+                    const float dx = sx - ix;
                     val = (1 - dx) * get_pixel(im, ix, r, k) + dx * get_pixel(im, ix+1, r, k);
                 }
                 set_pixel(part, c, r, k, val);

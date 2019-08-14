@@ -33,7 +33,8 @@ void cuda_set_device(int n)
 {
     gpu_index = n;
     cudaError_t status = cudaSetDevice(n);
-    if(status != cudaSuccess) CHECK_CUDA(status);
+    if (status != cudaSuccess)
+        CHECK_CUDA(status);
 }
 
 int cuda_get_device()
@@ -216,7 +217,7 @@ cublasHandle_t blas_handle()
 {
     static int init[16] = {0};
     static cublasHandle_t handle[16];
-    int i = cuda_get_device();
+    const int i = cuda_get_device();
     if(!init[i]) {
         cublasCreate(&handle[i]);
         cublasStatus_t status = cublasSetStream(handle[i], get_cuda_stream());
