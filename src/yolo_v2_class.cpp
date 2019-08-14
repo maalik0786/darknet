@@ -70,8 +70,32 @@ int get_device_count()
 #endif	// GPU
 }
 
-int get_device_name(const int gpu, char* device_name)
-{
+bool built_with_cuda(){
+#ifdef GPU
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool built_with_cudnn(){
+#ifdef CUDNN
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool built_with_opencv(){
+#ifdef OPENCV
+    return true;
+#else
+    return false;
+#endif
+}
+
+
+int get_device_name(int gpu, char* deviceName) {
 #ifdef GPU
     cudaDeviceProp prop{};
     cudaGetDeviceProperties(&prop, gpu);
