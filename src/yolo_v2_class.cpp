@@ -15,13 +15,13 @@ extern "C" {
 #include "option_list.h"
 #include "stb_image.h"
 }
-
 //#include <sys/time.h>
 
 #include <vector>
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #define NFRAMES 3
 
@@ -49,6 +49,14 @@ int detect_objects(const float* data, const int width, const int height, bbox_t_
     for (size_t i = 0; i < detection.size() && i < C_SHARP_MAX_OBJECTS; ++i)
         container.candidates[i] = detection[i];
     return detection.size();
+}
+
+int track_objects(const float* data, const int width, const int height, bbox_t_container& container)
+{
+    auto tracking = detector->tracking_id(detector->detect(image{ height, width,3, (float*)data }));
+    for (size_t i = 0; i < tracking.size() && i < C_SHARP_MAX_OBJECTS; ++i)
+        container.candidates[i] = tracking[i];
+    return tracking.size();
 }
 
 int dispose()
@@ -95,7 +103,7 @@ bool built_with_opencv(){
 }
 
 
-int get_device_name(int gpu, char* deviceName) {
+int get_device_name(int gpu, char* device_name) {
 #ifdef GPU
     cudaDeviceProp prop{};
     cudaGetDeviceProperties(&prop, gpu);
@@ -141,31 +149,32 @@ LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename
 
     net = parse_network_cfg_custom(cfg_file, 1, 0);//slow 1-2s
     load_weights(&net, weight_file);//fast <100ms
+  
+    set_batch_network(&net, 1);
+    net.gpu_index = cur_gpu_id;
+    fuse_conv_batchnorm(net);
+   
+    const auto l = net.layers[net.n - 1];
 
-//not needed now, maybe turn on later for detection and tracking ...    
-    //set_batch_network(&net, 1);
-    //net.gpu_index = cur_gpu_id;
-    //fuse_conv_batchnorm(net);
     
-   // const auto l = net.layers[net.n - 1];
-   // int j;
-
-   // detector_gpu.avg = static_cast<float *>(calloc(l.outputs, sizeof(float)));
-   // for (j = 0; j < NFRAMES; ++j) detector_gpu.predictions[j] = static_cast<float*>(calloc(l.outputs, sizeof(float)));
-   // for (j = 0; j < NFRAMES; ++j) detector_gpu.images[j] = make_image(1, 1, 3);
-
-    //detector_gpu.track_id = static_cast<unsigned int *>(calloc(l.classes, sizeof(unsigned int)));
-    //for (j = 0; j < l.classes; ++j) detector_gpu.track_id[j] = 1;
+    detector_gpu.avg = static_cast<float *>(calloc(l.outputs, sizeof(float)));
+    for (int j = 0; j < NFRAMES; ++j)
+        detector_gpu.predictions[j] = static_cast<float*>(calloc(l.outputs, sizeof(float)));
+    for (int j = 0; j < NFRAMES; ++j) detector_gpu.images[j] = make_image(1, 1, 3);
+    
+    detector_gpu.track_id = static_cast<unsigned int *>(calloc(l.classes, sizeof(unsigned int)));
+    
+    for (int j = 0; j <l.classes; ++j) detector_gpu.track_id[j] = 1;
+    detector_gpu.demo_index = 1;
 }
-
 
 LIB_API Detector::~Detector()
 {
     detector_gpu_t& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
-    //layer l = detector_gpu.net.layers[detector_gpu.net.n - 1];
+    layer l = detector_gpu.net.layers[detector_gpu.net.n - 1];
 
     free(detector_gpu.track_id);
-
+    
     free(detector_gpu.avg);
     for (int j = 0; j < NFRAMES; ++j) free(detector_gpu.predictions[j]);
     for (int j = 0; j < NFRAMES; ++j) if (detector_gpu.images[j].data) free(detector_gpu.images[j].data);
@@ -175,9 +184,7 @@ LIB_API Detector::~Detector()
     cudaGetDevice(&old_gpu_index);
     cuda_set_device(detector_gpu.net.gpu_index);
 #endif
-
     free_network(detector_gpu.net);
-
 #ifdef GPU
     cudaSetDevice(old_gpu_index);
 #endif
@@ -319,7 +326,6 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
         const auto b = dets[i].bbox;
         auto const obj_id = max_index(dets[i].prob, l.classes);
         auto const prob = dets[i].prob[obj_id];
-
         if (prob > thresh)
         {
             bbox_t bbox{};
@@ -347,34 +353,56 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(old_gpu_index);
 #endif
-
     return bbox_vec;
 }
 
 std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, const float thresh, const struct layer l, detection* const dets, int nboxes) const
 {
     std::vector<bbox_t> bbox_vec;
+#ifdef OPENCV
+    cv::Mat src = detector -> image_to_mat(img);
+    cv::cvtColor(src, src, CV_RGB2BGR);
+    cv::Mat croppedImg; 
+#endif
+
     for (auto i = 0; i < nboxes; ++i)
     {
         const auto b = dets[i].bbox;
         auto const obj_id = max_index(dets[i].prob, l.classes);
         auto const prob = dets[i].prob[obj_id];
-
+        auto const bbox_x = std::max(static_cast<double>(0), (b.x - b.w / 2.)* img.w);
+        auto const bbox_y = std::max(static_cast<double>(0), (b.y - b.h / 2.)* img.h);
+        auto const bbox_w = img.w * b.w;
+        auto const bbox_h = img.h * b.h;
+#ifdef OPENCV
+        if (bbox_x - 10 > 0 && bbox_y - 10 > 0 && bbox_w - 30 && bbox_h - 30)
+        croppedImg = src(cv::Rect(bbox_x - 10, bbox_y -10, bbox_w + 30, bbox_h + 30));
+        else
+            croppedImg = src(cv::Rect(bbox_x, bbox_y, bbox_w, bbox_h));
+  
+        auto shape = detector-> detect_shape(croppedImg);
+        bbox_t bbox{};
+#endif
         if (prob > thresh)
         {
-            bbox_vec.push_back({
-                static_cast<unsigned int>(std::max(static_cast<double>(0), (b.x - b.w / 2.) * img.w)),
-                static_cast<unsigned int>(std::max(static_cast<double>(0), (b.y - b.h / 2.) * img.h)),
-                static_cast<unsigned int>(b.w * img.w),
-                static_cast<unsigned int>(b.h * img.h),
-                prob,
-                static_cast<unsigned int>(obj_id),
-                0,
-                0,
-                NAN,
-                NAN,
-                NAN });
+            bbox.x = bbox_x;
+            bbox.y = bbox_y;
+            bbox.w = bbox_w;
+            bbox.h = bbox_h;
+            bbox.obj_id = obj_id;
+            bbox.prob = prob;
+            bbox.track_id = 0;
+            bbox.frames_counter = 0;
+            bbox.x_3d = NAN;
+            bbox.y_3d = NAN;
+            bbox.z_3d = NAN;
+#ifdef OPENCV
+            static_cast<char>(shape);
+#else
+            static_cast<char>(None);
+#endif
         }
+        bbox_vec.push_back(bbox);
     }
     return bbox_vec;
 }
@@ -385,23 +413,28 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     auto& net = detector_gpu.net;
     net.wait_stream = wait_stream;
     const auto l = net.layers[net.n - 1];
-    network_predict(net, img.data);
+    network_predict_gpu(net, img.data);
     
     auto nboxes = 0;
     const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-    auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
+    std::vector<bbox_t> bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
     
     free_detections(dets, nboxes);
     return bbox_vec;
 }
 
-LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history,
-                                                  int const frames_story, int const max_dist)
+LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history, int const frames_story, int const max_dist)
 {
     detector_gpu_t& det_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
     bool prev_track_id_present = false;
+    unsigned int frame_id  = det_gpu.demo_index++;
+    // TODO: call the shape_detector
+    for (size_t i = 0; i < cur_bbox_vec.size(); ++i)
+        cur_bbox_vec[i].frames_counter = frame_id;
+    // add shape into vector
+
     for (auto& i : prev_bbox_vec_deque)
         if (i.size() > 0) prev_track_id_present = true;
 
@@ -437,11 +470,10 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
                 }
             }
 
-            bool track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(),
-                                                [&i](bbox_t const& b)
-                                                {
-                                                    return b.track_id == i.track_id && b.obj_id == i.obj_id;
-                                                });
+            bool track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(),[&i](bbox_t const& b)
+            {
+                return b.track_id == i.track_id && b.obj_id == i.obj_id;
+            });
 
             if (cur_index >= 0 && track_id_absent)
             {
@@ -461,10 +493,114 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
         prev_bbox_vec_deque.push_front(cur_bbox_vec);
         if (prev_bbox_vec_deque.size() > frames_story) prev_bbox_vec_deque.pop_back();
     }
-
     return cur_bbox_vec;
 }
 
+#ifdef OPENCV
+shape_type Detector::detect_shape(cv::Mat src)
+{
+    if (src.empty()) return None;
+
+    // Convert to grayscale
+    cv::Mat gray;
+    cv::cvtColor(src, gray, CV_BGR2GRAY);
+   
+    // Use Canny instead of threshold to catch squares with gradient shading
+    cv::Mat bw;
+    cv::Canny(gray, bw, 0, 50, 5);
+   
+    // Find contours
+    std::vector<std::vector<cv::Point> > contours;
+    cv::findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+    std::vector<cv::Point> approx;
+    cv::Mat dst = src.clone();
+
+    for (int i = 0; i < contours.size(); i++)
+    {
+        // Approximate contour with accuracy proportional
+        // to the contour perimeter
+        cv::approxPolyDP(cv::Mat(contours[i]), approx, cv::arcLength(cv::Mat(contours[i]), true) * 0.02, true);
+
+        // Skip small or non-convex objects 
+        if (std::fabs(cv::contourArea(contours[i])) < 100 || !cv::isContourConvex(approx))
+           continue;
+
+        if (approx.size() == 3)
+            return Triangle;
+
+        else if (approx.size() >= 4 && approx.size() <= 6)
+        {
+            // Number of vertices of polygonal curve
+            int vtc = approx.size();
+
+            // Get the cosines of all corners
+            std::vector<double> cos;
+            for (int j = 2; j < vtc + 1; j++)
+                cos.push_back(detector -> shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
+
+            // Sort ascending the cosine values
+            std::sort(cos.begin(), cos.end());
+
+            // Get the lowest and the highest cosine
+            double mincos = cos.front();
+            double maxcos = cos.back();
+
+            // Use the degrees obtained above and the number of vertices
+            // to determine the shape of the contour
+            if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
+                return Rectangle;
+
+            else if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
+                return Penta;
+
+            else if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45) 
+                return Hexa;
+        }
+
+        else
+        {
+            // Detect and label circles
+            double area = cv::contourArea(contours[i]);
+            cv::Rect r = cv::boundingRect(contours[i]);
+            int radius = r.width / 2;
+
+            if (std::abs(1 - ((double)r.width / r.height)) <= 0.2 &&
+                std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
+                return Circle;
+        }
+    }
+    return None;
+}
+
+cv::Mat Detector:: image_to_mat(image img)
+{
+    int channels = img.c;
+    int width = img.w;
+    int height = img.h;
+    cv::Mat mat = cv::Mat(height, width, CV_8UC(channels));
+    int step = mat.step;
+
+    for (int y = 0; y < img.h; ++y) {
+        for (int x = 0; x < img.w; ++x) {
+            for (int c = 0; c < img.c; ++c) {
+                float val = img.data[c * img.h * img.w + y * img.w + x];
+                mat.data[y * step + x * img.c + c] = (unsigned char)(val * 255);
+            }
+        }
+    }
+    return mat;
+}
+
+double Detector::shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
+{
+    double dx1 = pt1.x - pt0.x;
+    double dy1 = pt1.y - pt0.y;
+    double dx2 = pt2.x - pt0.x;
+    double dy2 = pt2.y - pt0.y;
+    return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
+}
+#endif
 
 void* Detector::get_cuda_context() const
 {

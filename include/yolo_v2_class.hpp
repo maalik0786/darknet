@@ -25,7 +25,12 @@ struct bbox_t {
     unsigned int obj_id;           // class of object - from range [0, classes-1]
     unsigned int track_id;         // tracking id for video (0 - untracked, 1 - inf - tracked object)
     unsigned int frames_counter;   // counter of frames on which the object was detected
-    float x_3d, y_3d, z_3d;        // center of object (in Meters) if ZED 3D Camera is used
+    float x_3d, y_3d, z_3d;        // center of object (in Meters) if ZED 3D Camera is used		
+		char shape; 							// shape of the object
+};
+
+enum shape_type {
+	None, Triangle, Rectangle, Penta, Hexa, Half_Circle, Circle
 };
 
 struct image_t {
@@ -55,10 +60,12 @@ struct bbox_t_container {
 #include <opencv2/highgui/highgui_c.h>   // C
 #include <opencv2/imgproc/imgproc_c.h>   // C
 #endif
+#include <darknet.h>
 
 extern "C" LIB_API int init(const char *configuration_filename, const char *weights_filename, int gpu);
 extern "C" LIB_API int detect_image(const char *filename, bbox_t_container &container);
 extern "C" LIB_API int detect_objects(const float* data, const int width, const int height, bbox_t_container& container);
+extern "C" LIB_API int track_objects(const float* data, const int width, const int height, bbox_t_container & container);
 extern "C" LIB_API int dispose();
 extern "C" LIB_API int get_device_count();
 extern "C" LIB_API int get_device_name(int gpu, char* deviceName);
@@ -81,6 +88,7 @@ public:
     LIB_API std::vector<bbox_t> detect(std::string image_filename, float thresh = 0.2, bool use_mean = false) const;
     LIB_API std::vector<bbox_t> detect(image_t img, float thresh = 0.2, bool use_mean = false) const;
 		std::vector<bbox_t> save_bounding_boxes_into_vector(image img, float thresh, struct layer l, detection* dets, int nboxes) const;
+
     LIB_API std::vector<bbox_t> detect(image img, float thresh = 0.2) const;
     static LIB_API image_t load_image(std::string image_filename);
     static LIB_API void free_image(image_t m);
@@ -88,13 +96,17 @@ public:
     LIB_API int get_net_height() const;
     LIB_API int get_net_color_depth() const;
 
-    LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history = true,
-                                                int const frames_story = 5, int const max_dist = 40);
+    LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history = true, int const frames_story = 30, int const max_dist = 40);
+
+#ifdef OPENCV
+		shape_type detect_shape(cv::Mat src);
+		cv::Mat Detector::image_to_mat(image img);
+		double shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0);
+#endif
 
     LIB_API void *get_cuda_context() const;
 
-    //LIB_API bool send_json_http(std::vector<bbox_t> cur_bbox_vec, std::vector<std::string> obj_names, int frame_id,
-    //    std::string filename = std::string(), int timeout = 400000, int port = 8070);
+    //LIB_API bool send_json_http(std::vector<bbox_t> cur_bbox_vec, std::vector<std::string> obj_names, int frame_id, std::string filename = std::string(), int timeout = 400000, int port = 8070);
 
     std::vector<bbox_t> detect_resized(image_t img, int init_w, int init_h, float thresh = 0.2, bool use_mean = false)
     {

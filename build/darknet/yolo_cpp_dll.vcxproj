@@ -52,17 +52,28 @@
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(Platform)\DLL_$(Configuration)\</IntDir>
     <LibraryPath>C:\opencv_3.0\opencv343\build\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(LibraryPath)</LibraryPath>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(OPENCV_DIR)\include;C:\opencv_3.0\opencv\build\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;GPU;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OPENCV_DIR);C:\opencv_3.0\opencv\build\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OPENCV;GPU;_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;</UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>stdlib.h;crtdbg.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <OpenMPSupport>true</OpenMPSupport>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -89,21 +100,27 @@ xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Co
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(OPENCV_DIR);..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>GPU;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OPENCV_DIR);$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OPENCV;GPU;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CLanguageStandard>c11</CLanguageStandard>
       <CppLanguageStandard>c++1y</CppLanguageStandard>
       <PrecompiledHeaderCompileAs>CompileAsCpp</PrecompiledHeaderCompileAs>
       <CompileAs>Default</CompileAs>
       <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;</UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>
       </DisableSpecificWarnings>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <OpenMPSupport>true</OpenMPSupport>
+      <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -112,6 +129,7 @@ xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Co
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\x64\vc15\lib;$(OPENCV_DIR)\x64\vc14\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\x64;$(cudnn)\lib\x64;..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>pthreadVC2.lib;cublas.lib;curand.lib;cudart.lib;cuda.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)\$(TargetName)$(TargetExt)</OutputFile>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
