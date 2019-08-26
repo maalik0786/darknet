@@ -22,6 +22,7 @@ extern "C" {
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <ppl.h>
 
 #define NFRAMES 3
 
@@ -149,22 +150,24 @@ LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename
 
     net = parse_network_cfg_custom(cfg_file, 1, 0);//slow 1-2s
     load_weights(&net, weight_file);//fast <100ms
-  
+  /*
     set_batch_network(&net, 1);
     net.gpu_index = cur_gpu_id;
     fuse_conv_batchnorm(net);
-   
+   */
     const auto l = net.layers[net.n - 1];
-
-    
+    /*
     detector_gpu.avg = static_cast<float *>(calloc(l.outputs, sizeof(float)));
+
     for (int j = 0; j < NFRAMES; ++j)
         detector_gpu.predictions[j] = static_cast<float*>(calloc(l.outputs, sizeof(float)));
+
     for (int j = 0; j < NFRAMES; ++j) detector_gpu.images[j] = make_image(1, 1, 3);
-    
+    */
+
     detector_gpu.track_id = static_cast<unsigned int *>(calloc(l.classes, sizeof(unsigned int)));
-    
-    for (int j = 0; j <l.classes; ++j) detector_gpu.track_id[j] = 1;
+    concurrency::parallel_for(size_t(0), size_t(l.classes), [&](size_t j) {
+        detector_gpu.track_id[j] = 1;});
     detector_gpu.demo_index = 1;
 }
 
@@ -364,7 +367,6 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
     cv::cvtColor(src, src, CV_RGB2BGR);
     cv::Mat croppedImg; 
 #endif
-
     for (auto i = 0; i < nboxes; ++i)
     {
         const auto b = dets[i].bbox;
@@ -379,12 +381,11 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
         croppedImg = src(cv::Rect(bbox_x - 10, bbox_y -10, bbox_w + 30, bbox_h + 30));
         else
             croppedImg = src(cv::Rect(bbox_x, bbox_y, bbox_w, bbox_h));
-  
         auto shape = detector-> detect_shape(croppedImg);
-        bbox_t bbox{};
 #endif
         if (prob > thresh)
         {
+            bbox_t bbox{};
             bbox.x = bbox_x;
             bbox.y = bbox_y;
             bbox.w = bbox_w;
@@ -401,8 +402,9 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
 #else
             static_cast<char>(None);
 #endif
+            bbox_vec.push_back(bbox);
         }
-        bbox_vec.push_back(bbox);
+        
     }
     return bbox_vec;
 }

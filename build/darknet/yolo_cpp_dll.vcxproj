@@ -60,8 +60,8 @@
       <Optimization>MaxSpeed</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(OPENCV_DIR);C:\opencv_3.0\opencv\build\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>OPENCV;GPU;_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;</UndefinePreprocessorDefinitions>
+      <PreprocessorDefinitions>GPU;_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;OPENCV;</UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>stdlib.h;crtdbg.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -89,7 +89,7 @@
     <PostBuildEvent>
       <Command>xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo\
 
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Debug\netcoreapp3.0\</Command>
+xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Debug\netcoreapp3.0\</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Outputs>
@@ -104,12 +104,12 @@ xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Co
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(OPENCV_DIR);$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>OPENCV;GPU;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GPU;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CLanguageStandard>c11</CLanguageStandard>
       <CppLanguageStandard>c++1y</CppLanguageStandard>
       <PrecompiledHeaderCompileAs>CompileAsCpp</PrecompiledHeaderCompileAs>
       <CompileAs>Default</CompileAs>
-      <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;</UndefinePreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;OPENCV;</UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>
@@ -140,10 +140,12 @@ xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Co
       <CudaRuntime>Shared</CudaRuntime>
     </CudaCompile>
     <CudaLink>
-      <Optimization>O3</Optimization>
+      <Optimization>O2</Optimization>
     </CudaLink>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\Alturos.Yolo\yolo_cpp_dll.dll</Command>
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\Alturos.Yolo\yolo_cpp_dll.dll
+
+xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Release\netcoreapp3.0\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
