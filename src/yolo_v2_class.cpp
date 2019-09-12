@@ -5,24 +5,17 @@
 
 extern "C" {
 #include "detection_layer.h"
-#include "region_layer.h"
-#include "cost_layer.h"
 #include "utils.h"
 #include "parser.h"
-#include "box.h"
 #include "image.h"
-#include "demo.h"
-#include "option_list.h"
 #include "stb_image.h"
 }
-//#include <sys/time.h>
 
 #include <vector>
 #include <iostream>
 #include <algorithm>
 #include <cmath>
 #include <string>
-#include <ppl.h>
 
 #define NFRAMES 3
 
@@ -62,8 +55,6 @@ int track_objects(const float* data, const int width, const int height, bbox_t_c
 
 int dispose()
 {
-    //if (detector != NULL) delete detector;
-    //detector = NULL;
     detector.reset();
     return 1;
 }
@@ -137,7 +128,7 @@ struct detector_gpu_t
     unsigned int* track_id;
 };
 
-LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cur_gpu_id(gpu_id)
+LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cur_gpu_id(gpu_id),                                                                                     wait_stream(false)
 {
     detector_gpu_ptr = std::make_shared<detector_gpu_t>();
     auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
@@ -148,13 +139,13 @@ LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename
     const auto cfg_file = const_cast<char *>(cfg_filename.data());
     const auto weight_file = const_cast<char *>(weight_filename.data());
 
-    net = parse_network_cfg_custom(cfg_file, 1, 0);//slow 1-2s
-    load_weights(&net, weight_file);//fast <100ms
-  /*
-    set_batch_network(&net, 1);
-    net.gpu_index = cur_gpu_id;
-    fuse_conv_batchnorm(net);
-   */
+    net = parse_network_cfg_custom(cfg_file, 1, 0); //slow 1-2s
+    load_weights(&net, weight_file); //fast <100ms
+    /*
+      set_batch_network(&net, 1);
+      net.gpu_index = cur_gpu_id;
+      fuse_conv_batchnorm(net);
+     */
     const auto l = net.layers[net.n - 1];
     /*
     detector_gpu.avg = static_cast<float *>(calloc(l.outputs, sizeof(float)));
@@ -166,21 +157,21 @@ LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename
     */
 
     detector_gpu.track_id = static_cast<unsigned int *>(calloc(l.classes, sizeof(unsigned int)));
-    concurrency::parallel_for(size_t(0), size_t(l.classes), [&](size_t j) {
-        detector_gpu.track_id[j] = 1;});
+    for (auto j = 0; j < l.classes; j++)
+        detector_gpu.track_id[j] = 1;
     detector_gpu.demo_index = 1;
 }
 
 LIB_API Detector::~Detector()
 {
-    detector_gpu_t& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
-    layer l = detector_gpu.net.layers[detector_gpu.net.n - 1];
+    auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto l = detector_gpu.net.layers[detector_gpu.net.n - 1];
 
     free(detector_gpu.track_id);
     
     free(detector_gpu.avg);
-    for (int j = 0; j < NFRAMES; ++j) free(detector_gpu.predictions[j]);
-    for (int j = 0; j < NFRAMES; ++j) if (detector_gpu.images[j].data) free(detector_gpu.images[j].data);
+    for (auto& prediction : detector_gpu.predictions) free(prediction);
+    for (auto& image : detector_gpu.images) if (image.data) free(image.data);
 
 #ifdef GPU
     int old_gpu_index;
@@ -195,19 +186,19 @@ LIB_API Detector::~Detector()
 
 LIB_API int Detector::get_net_width() const
 {
-    detector_gpu_t& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
     return detector_gpu.net.w;
 }
 
 LIB_API int Detector::get_net_height() const
 {
-    detector_gpu_t& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
     return detector_gpu.net.h;
 }
 
 LIB_API int Detector::get_net_color_depth() const
 {
-    detector_gpu_t& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
     return detector_gpu.net.c;
 }
 
@@ -239,7 +230,7 @@ static image load_image_stb(char* filename, const int channels)
             {
                 const auto dst_index = i + w * j + w * h * k;
                 const auto src_index = k + c * i + c * w * j;
-                im.data[dst_index] = (float)data[src_index] / 255.;
+                im.data[dst_index] = static_cast<float>(data[src_index]) / 255.;
             }
         }
     }
@@ -420,7 +411,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     auto nboxes = 0;
     const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-    std::vector<bbox_t> bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
+    auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
     
     free_detections(dets, nboxes);
     return bbox_vec;
@@ -428,13 +419,13 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
 
 LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history, int const frames_story, int const max_dist)
 {
-    detector_gpu_t& det_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto& det_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
-    bool prev_track_id_present = false;
+    auto prev_track_id_present = false;
     unsigned int frame_id  = det_gpu.demo_index++;
     // TODO: call the shape_detector
-    for (size_t i = 0; i < cur_bbox_vec.size(); ++i)
-        cur_bbox_vec[i].frames_counter = frame_id;
+    for (auto& i : cur_bbox_vec)
+        i.frames_counter = frame_id;
     // add shape into vector
 
     for (auto& i : prev_bbox_vec_deque)
@@ -442,8 +433,8 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
 
     if (!prev_track_id_present)
     {
-        for (size_t i = 0; i < cur_bbox_vec.size(); ++i)
-            cur_bbox_vec[i].track_id = det_gpu.track_id[cur_bbox_vec[i].obj_id]++;
+        for (auto& i : cur_bbox_vec)
+            i.track_id = det_gpu.track_id[i.obj_id]++;
         prev_bbox_vec_deque.push_front(cur_bbox_vec);
         if (prev_bbox_vec_deque.size() > frames_story) prev_bbox_vec_deque.pop_back();
         return cur_bbox_vec;
@@ -455,14 +446,14 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
     {
         for (auto& i : prev_bbox_vec)
         {
-            int cur_index = -1;
+            auto cur_index = -1;
             for (size_t m = 0; m < cur_bbox_vec.size(); ++m)
             {
-                bbox_t const& k = cur_bbox_vec[m];
+                auto const& k = cur_bbox_vec[m];
                 if (i.obj_id == k.obj_id)
                 {
-                    float center_x_diff = (float)(i.x + i.w / 2) - (float)(k.x + k.w / 2);
-                    float center_y_diff = (float)(i.y + i.h / 2) - (float)(k.y + k.h / 2);
+                    auto center_x_diff = (float)(i.x + i.w / 2) - (float)(k.x + k.w / 2);
+                    auto center_y_diff = (float)(i.y + i.h / 2) - (float)(k.y + k.h / 2);
                     unsigned int cur_dist = sqrt(center_x_diff * center_x_diff + center_y_diff * center_y_diff);
                     if (cur_dist < max_dist && (k.track_id == 0 || dist_vec[m] > cur_dist))
                     {
@@ -472,7 +463,7 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
                 }
             }
 
-            bool track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(),[&i](bbox_t const& b)
+            auto track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(),[&i](bbox_t const& b)
             {
                 return b.track_id == i.track_id && b.obj_id == i.obj_id;
             });
@@ -486,9 +477,9 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
         }
     }
 
-    for (size_t i = 0; i < cur_bbox_vec.size(); ++i)
-        if (cur_bbox_vec[i].track_id == 0)
-            cur_bbox_vec[i].track_id = det_gpu.track_id[cur_bbox_vec[i].obj_id]++;
+    for (auto& i : cur_bbox_vec)
+        if (i.track_id == 0)
+            i.track_id = det_gpu.track_id[i.obj_id]++;
 
     if (change_history)
     {
@@ -612,7 +603,7 @@ void* Detector::get_cuda_context() const
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(cur_gpu_id);
 
-    void* cuda_context = cuda_get_context();
+    auto cuda_context = cuda_get_context();
 
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(old_gpu_index);

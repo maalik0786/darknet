@@ -47,6 +47,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
     <IntDir>$(Platform)\DLL_$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
@@ -74,6 +76,7 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitFramePointers>true</OmitFramePointers>
+      <EnablePREfast>true</EnablePREfast>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -87,9 +90,10 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo\
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\Alturos.Yolo\
 
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Debug\netcoreapp3.0\</Command>
+xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Debug\netcoreapp3.0\
+xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Debug\netcoreapp3.0\</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Outputs>
