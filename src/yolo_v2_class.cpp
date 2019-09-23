@@ -18,7 +18,9 @@ extern "C" {
 #include <string>
 
 #if defined(__linux__)
+#if OPENCV
 #include <opencv2/opencv.hpp>
+#endif
 #endif
 
 #define NFRAMES 3
@@ -399,11 +401,11 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
                                                               detection* const dets, int nboxes) const
 {
     std::vector<bbox_t> bbox_vec;
-#ifdef OPENCV
-    cv::Mat src = detector->image_to_mat(img);
-    cvtColor(src, src, CV_RGB2BGR);
-    cv::Mat croppedImg;
-#endif
+//#ifdef OPENCV
+//    cv::Mat src = detector->image_to_mat(img);
+//    cvtColor(src, src, CV_RGB2BGR);
+//    cv::Mat croppedImg;
+//#endif
     for (auto i = 0; i < nboxes; ++i)
     {
         const auto b = dets[i].bbox;
@@ -413,13 +415,13 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
         auto const bbox_y = std::max(static_cast<double>(0), (b.y - b.h / 2.) * img.h);
         auto const bbox_w = img.w * b.w;
         auto const bbox_h = img.h * b.h;
-#ifdef OPENCV
-        if (bbox_x - 10 > 0 && bbox_y - 10 > 0 && bbox_w - 30 && bbox_h - 30)
-            croppedImg = src(cv::Rect(bbox_x - 10, bbox_y - 10, bbox_w + 30, bbox_h + 30));
-        else
-            croppedImg = src(cv::Rect(bbox_x, bbox_y, bbox_w, bbox_h));
-        auto shape = detector->detect_shape(croppedImg);
-#endif
+//#ifdef OPENCV
+//        if (bbox_x - 10 > 0 && bbox_y - 10 > 0 && bbox_w - 30 && bbox_h - 30)
+//            croppedImg = src(cv::Rect(bbox_x - 10, bbox_y - 10, bbox_w + 30, bbox_h + 30));
+//        else
+//            croppedImg = src(cv::Rect(bbox_x, bbox_y, bbox_w, bbox_h));
+//        auto shape = detector->detect_shape(croppedImg);
+//#endif
         if (prob > thresh)
         {
             bbox_t bbox{};
@@ -434,11 +436,11 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
             bbox.x_3d = NAN;
             bbox.y_3d = NAN;
             bbox.z_3d = NAN;
-#ifdef OPENCV
-            static_cast<char>(shape);
-#else
+//#ifdef OPENCV
+//            static_cast<char>(shape);
+//#else
             static_cast<char>(None);
-#endif
+//#endif
             bbox_vec.push_back(bbox);
         }
     }
@@ -535,111 +537,111 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
     return cur_bbox_vec;
 }
 
-#ifdef OPENCV
-shape_type Detector::detect_shape(cv::Mat src)
-{
-    if (src.empty()) return None;
-
-    // Convert to grayscale
-    cv::Mat gray;
-    cvtColor(src, gray, CV_BGR2GRAY);
-
-    // Use Canny instead of threshold to catch squares with gradient shading
-    cv::Mat bw;
-    Canny(gray, bw, 0, 50, 5);
-
-    // Find contours
-    std::vector<std::vector<cv::Point>> contours;
-    findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-
-    std::vector<cv::Point> approx;
-    cv::Mat dst = src.clone();
-
-    for (int i = 0; i < contours.size(); i++)
-    {
-        // Approximate contour with accuracy proportional
-        // to the contour perimeter
-        approxPolyDP(cv::Mat(contours[i]), approx, arcLength(cv::Mat(contours[i]), true) * 0.02, true);
-
-        // Skip small or non-convex objects 
-        if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
-            continue;
-
-        if (approx.size() == 3)
-            return Triangle;
-        if (approx.size() >= 4 && approx.size() <= 6)
-        {
-            // Number of vertices of polygonal curve
-            int vtc = approx.size();
-
-            // Get the cosines of all corners
-            std::vector<double> cos;
-            for (int j = 2; j < vtc + 1; j++)
-                cos.push_back(detector->shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
-
-            // Sort ascending the cosine values
-            std::sort(cos.begin(), cos.end());
-
-            // Get the lowest and the highest cosine
-            double mincos = cos.front();
-            double maxcos = cos.back();
-
-            // Use the degrees obtained above and the number of vertices
-            // to determine the shape of the contour
-            if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
-                return Rectangle;
-            if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
-                return Penta;
-            if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45)
-                return Hexa;
-        }
-
-        else
-        {
-            // Detect and label circles
-            double area = contourArea(contours[i]);
-            cv::Rect r = boundingRect(contours[i]);
-            int radius = r.width / 2;
-
-            if (std::abs(1 - (static_cast<double>(r.width) / r.height)) <= 0.2 &&
-                std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
-                return Circle;
-        }
-    }
-    return None;
-}
-
-cv::Mat Detector::image_to_mat(image img)
-{
-    int channels = img.c;
-    int width = img.w;
-    int height = img.h;
-    cv::Mat mat = cv::Mat(height, width, CV_8UC(channels));
-    int step = mat.step;
-
-    for (int y = 0; y < img.h; ++y)
-    {
-        for (int x = 0; x < img.w; ++x)
-        {
-            for (int c = 0; c < img.c; ++c)
-            {
-                float val = img.data[c * img.h * img.w + y * img.w + x];
-                mat.data[y * step + x * img.c + c] = static_cast<unsigned char>(val * 255);
-            }
-        }
-    }
-    return mat;
-}
-
-double Detector::shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
-{
-    double dx1 = pt1.x - pt0.x;
-    double dy1 = pt1.y - pt0.y;
-    double dx2 = pt2.x - pt0.x;
-    double dy2 = pt2.y - pt0.y;
-    return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
-}
-#endif
+//#ifdef OPENCV
+//shape_type Detector::detect_shape(cv::Mat src)
+//{
+//    if (src.empty()) return None;
+//
+//    // Convert to grayscale
+//    cv::Mat gray;
+//    cvtColor(src, gray, CV_BGR2GRAY);
+//
+//    // Use Canny instead of threshold to catch squares with gradient shading
+//    cv::Mat bw;
+//    Canny(gray, bw, 0, 50, 5);
+//
+//    // Find contours
+//    std::vector<std::vector<cv::Point>> contours;
+//    findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+//
+//    std::vector<cv::Point> approx;
+//    cv::Mat dst = src.clone();
+//
+//    for (int i = 0; i < contours.size(); i++)
+//    {
+//        // Approximate contour with accuracy proportional
+//        // to the contour perimeter
+//        approxPolyDP(cv::Mat(contours[i]), approx, arcLength(cv::Mat(contours[i]), true) * 0.02, true);
+//
+//        // Skip small or non-convex objects 
+//        if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
+//            continue;
+//
+//        if (approx.size() == 3)
+//            return Triangle;
+//        if (approx.size() >= 4 && approx.size() <= 6)
+//        {
+//            // Number of vertices of polygonal curve
+//            int vtc = approx.size();
+//
+//            // Get the cosines of all corners
+//            std::vector<double> cos;
+//            for (int j = 2; j < vtc + 1; j++)
+//                cos.push_back(detector->shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
+//
+//            // Sort ascending the cosine values
+//            std::sort(cos.begin(), cos.end());
+//
+//            // Get the lowest and the highest cosine
+//            double mincos = cos.front();
+//            double maxcos = cos.back();
+//
+//            // Use the degrees obtained above and the number of vertices
+//            // to determine the shape of the contour
+//            if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
+//                return Rectangle;
+//            if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
+//                return Penta;
+//            if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45)
+//                return Hexa;
+//        }
+//
+//        else
+//        {
+//            // Detect and label circles
+//            double area = contourArea(contours[i]);
+//            cv::Rect r = boundingRect(contours[i]);
+//            int radius = r.width / 2;
+//
+//            if (std::abs(1 - (static_cast<double>(r.width) / r.height)) <= 0.2 &&
+//                std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
+//                return Circle;
+//        }
+//    }
+//    return None;
+//}
+//
+//cv::Mat Detector::image_to_mat(image img)
+//{
+//    int channels = img.c;
+//    int width = img.w;
+//    int height = img.h;
+//    cv::Mat mat = cv::Mat(height, width, CV_8UC(channels));
+//    int step = mat.step;
+//
+//    for (int y = 0; y < img.h; ++y)
+//    {
+//        for (int x = 0; x < img.w; ++x)
+//        {
+//            for (int c = 0; c < img.c; ++c)
+//            {
+//                float val = img.data[c * img.h * img.w + y * img.w + x];
+//                mat.data[y * step + x * img.c + c] = static_cast<unsigned char>(val * 255);
+//            }
+//        }
+//    }
+//    return mat;
+//}
+//
+//double Detector::shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
+//{
+//    double dx1 = pt1.x - pt0.x;
+//    double dy1 = pt1.y - pt0.y;
+//    double dx2 = pt2.x - pt0.x;
+//    double dy2 = pt2.y - pt0.y;
+//    return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
+//}
+//#endif
 
 void* Detector::get_cuda_context() const
 {
