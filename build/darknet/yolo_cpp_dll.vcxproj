@@ -80,7 +80,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OPENCV_DIR)\x64\vc15\lib;$(OPENCV_DIR)\x64\vc14\lib;C:\opencv_3.0\opencv\build\x64\vc14\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\x64;$(cudnn)\lib\x64;..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OPENCV_DIR)\x64\vc15\lib;$(OPENCV_DIR)\x64\vc14\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\x64;$(cudnn)\lib\x64;..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <OutputFile>$(OutDir)\$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalDependencies>pthreadVC2.lib;cublas.lib;curand.lib;cudart.lib;cuda.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AssemblyDebug>true</AssemblyDebug>
@@ -90,10 +90,10 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\Alturos.Yolo\
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo\
 
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Debug\netcoreapp3.0\
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Debug\netcoreapp3.0\</Command>
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Debug\netcoreapp3.0\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Debug\netcoreapp3.0\</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Outputs>
@@ -149,7 +149,8 @@ xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Co
     <PostBuildEvent>
       <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\Alturos.Yolo\yolo_cpp_dll.dll
 
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Release\netcoreapp3.0\</Command>
+xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Release\netcoreapp3.0\
+xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Release\netcoreapp3.0\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

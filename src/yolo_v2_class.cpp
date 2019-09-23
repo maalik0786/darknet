@@ -2,6 +2,7 @@
 #include "yolo_v2_class.hpp"
 
 #include "network.h"
+#include "region_layer.h"
 
 extern "C" {
 #include "detection_layer.h"
@@ -12,10 +13,13 @@ extern "C" {
 }
 
 #include <vector>
-#include <iostream>
 #include <algorithm>
 #include <cmath>
 #include <string>
+
+#if defined(__linux__)
+#include <opencv2/opencv.hpp>
+#endif
 
 #define NFRAMES 3
 
@@ -36,21 +40,60 @@ int detect_image(const char* filename, bbox_t_container& container)
     return detection.size();
 }
 
-int detect_objects(const float* data, const int width, const int height, bbox_t_container& container)
+int detect_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container)
 {
     // ReSharper disable once CppCStyleCast
-    auto detection = detector-> detect(image{ height, width,3, (float*)data });
+    auto detection = detector->detect(image_t{height, width, channel, (float*)data});
     for (size_t i = 0; i < detection.size() && i < C_SHARP_MAX_OBJECTS; ++i)
         container.candidates[i] = detection[i];
     return detection.size();
 }
 
-int track_objects(const float* data, const int width, const int height, bbox_t_container& container)
+int track_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container)
 {
-    auto tracking = detector->tracking_id(detector->detect(image{ height, width,3, (float*)data }));
+    auto tracking = detector->tracking_id(detector->detect(image_t{height, width, channel, (float*)data}));
     for (size_t i = 0; i < tracking.size() && i < C_SHARP_MAX_OBJECTS; ++i)
         container.candidates[i] = tracking[i];
     return tracking.size();
+}
+
+std::string gstreamer_pipeline(int capture_width, int capture_height, int display_width, int display_height,
+                               int frame_rate, int flip_method)
+{
+#if defined(__linux__)
+    return "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)" + std::to_string(capture_width) + ", height=(int)" +
+
+        std::to_string(capture_height) + ", format=(string)NV12, framerate=(fraction)" + std::to_string(frame_rate) +
+
+        "/1 ! nvvidconv flip-method=" + std::to_string(flip_method) + " ! video/x-raw, width=(int)" + std::to_string(display_width) + ", height=(int)" +
+
+        std::to_string(display_height) + ", format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)RGB ! appsink";
+#endif
+    return "";
+}
+
+unsigned char* get_image(const int capture_width, const int capture_height, const int display_width,
+                         const int display_height, const int frame_rate, const int flip_method)
+{
+    const auto pipeline = gstreamer_pipeline(capture_width, capture_height, display_width, display_height, frame_rate,
+                                             flip_method);
+    if (pipeline.empty())
+        return nullptr;
+
+#if defined(__linux__)
+    cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
+    if (!cap.isOpened())
+        std::cout << "Failed to open camera." << std::endl;
+
+    cv::Mat img;
+    if (!cap.read(img))
+    {
+        //cv::cvtColor(img, img, BGR2RGB);
+        //cv::imwrite("raspberry.jpeg", img);
+        return static_cast<unsigned char*>(img.data);
+    }
+    return nullptr;
+#endif
 }
 
 int dispose()
@@ -70,7 +113,8 @@ int get_device_count()
 #endif	// GPU
 }
 
-bool built_with_cuda(){
+bool built_with_cuda()
+{
 #ifdef GPU
     return true;
 #else
@@ -78,7 +122,8 @@ bool built_with_cuda(){
 #endif
 }
 
-bool built_with_cudnn(){
+bool built_with_cudnn()
+{
 #ifdef CUDNN
     return true;
 #else
@@ -86,7 +131,8 @@ bool built_with_cudnn(){
 #endif
 }
 
-bool built_with_opencv(){
+bool built_with_opencv()
+{
 #ifdef OPENCV
     return true;
 #else
@@ -95,7 +141,8 @@ bool built_with_opencv(){
 }
 
 
-int get_device_name(int gpu, char* device_name) {
+int get_device_name(const int gpu, char* device_name)
+{
 #ifdef GPU
     cudaDeviceProp prop{};
     cudaGetDeviceProperties(&prop, gpu);
@@ -128,7 +175,8 @@ struct detector_gpu_t
     unsigned int* track_id;
 };
 
-LIB_API Detector::Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cur_gpu_id(gpu_id),                                                                                     wait_stream(false)
+LIB_API Detector::
+Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cur_gpu_id(gpu_id), wait_stream(false)
 {
     detector_gpu_ptr = std::make_shared<detector_gpu_t>();
     auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
@@ -168,7 +216,7 @@ LIB_API Detector::~Detector()
     auto l = detector_gpu.net.layers[detector_gpu.net.n - 1];
 
     free(detector_gpu.track_id);
-    
+
     free(detector_gpu.avg);
     for (auto& prediction : detector_gpu.predictions) free(prediction);
     for (auto& image : detector_gpu.images) if (image.data) free(image.data);
@@ -203,7 +251,8 @@ LIB_API int Detector::get_net_color_depth() const
 }
 
 
-LIB_API std::vector<bbox_t> Detector::detect(std::string image_filename, float thresh, bool use_mean) const
+LIB_API std::vector<bbox_t> Detector::detect(const std::string image_filename, const float thresh,
+                                             const bool use_mean) const
 {
     const std::shared_ptr<image_t> image_ptr(new image_t, [](image_t* img)
     {
@@ -252,16 +301,15 @@ LIB_API image_t Detector::load_image(const std::string image_filename)
     return img;
 }
 
-
-LIB_API void Detector::free_image(image_t m)
+LIB_API void Detector::free_image(const image_t img)
 {
-    if (m.data)
-       free(m.data);
+    if (img.data)
+        free(img.data);
 }
 
 LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thresh, const bool use_mean) const
 {
-    auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto& detector_gpu = *static_cast<detector_gpu_t*>(detector_gpu_ptr.get());
     auto& net = detector_gpu.net;
 #ifdef GPU
     int old_gpu_index;
@@ -269,10 +317,10 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(net.gpu_index);
 
-    net.wait_stream = wait_stream; // 1 - wait CUDA-stream, 0 - not to wait
+    net.wait_stream = wait_stream;    // 1 - wait CUDA-stream, 0 - not to wait
 #endif
     //std::cout << "net.gpu_index = " << net.gpu_index << std::endl;
-     
+
     image im;
     im.c = img.c;
     im.data = img.data;
@@ -281,24 +329,20 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
 
     image sized;
 
-    if (net.w == im.w && net.h == im.h)
-    {
-        //sized = im;
-        /*this makes no sense, the image is already fitting perfectly, see below
+    if (net.w == im.w && net.h == im.h) {
         sized = make_image(im.w, im.h, im.c);
-        memcpy(sized.data, im.data, im.w * im.h * im.c * sizeof(float));
-        //*/
+        memcpy(sized.data, im.data, im.h * im.w * im.c * sizeof(float));
     }
     else
         sized = resize_image(im, net.w, net.h);
-    auto l = net.layers[net.n - 1];
 
-    const auto x = sized.data;
+    layer l = net.layers[net.n - 1];
 
-    const auto prediction = network_predict(net, x);
+    float* X = sized.data;
 
-    if (use_mean)
-    {
+    float* prediction = network_predict(net, X);
+
+    if (use_mean) {
         memcpy(detector_gpu.predictions[detector_gpu.demo_index], prediction, l.outputs * sizeof(float));
         mean_arrays(detector_gpu.predictions, NFRAMES, l.outputs, detector_gpu.avg);
         l.output = detector_gpu.avg;
@@ -307,26 +351,26 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     //get_region_boxes(l, 1, 1, thresh, detector_gpu.probs, detector_gpu.boxes, 0, 0);
     //if (nms) do_nms_sort(detector_gpu.boxes, detector_gpu.probs, l.w*l.h*l.n, l.classes, nms);
 
-    auto nboxes = 0;
-    const auto letterbox = 0;
-    const float hier_thresh = 0.5;
-    const auto dets = get_network_boxes(&net, sized.w, sized.h, thresh, hier_thresh, nullptr, 1, &nboxes, letterbox);
+    int nboxes = 0;
+    int letterbox = 0;
+    float hier_thresh = 0.5;
+    detection* dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
 
     std::vector<bbox_t> bbox_vec;
 
-    for (auto i = 0; i < nboxes; ++i)
-    {
-        const auto b = dets[i].bbox;
-        auto const obj_id = max_index(dets[i].prob, l.classes);
-        auto const prob = dets[i].prob[obj_id];
+    for (int i = 0; i < nboxes; ++i) {
+        box b = dets[i].bbox;
+        int const obj_id = max_index(dets[i].prob, l.classes);
+        float const prob = dets[i].prob[obj_id];
+
         if (prob > thresh)
         {
-            bbox_t bbox{};
-            bbox.x = std::max(static_cast<double>(0), (b.x - b.w / 2.) * sized.w);
-            bbox.y = std::max(static_cast<double>(0), (b.y - b.h / 2.) * sized.h);
-            bbox.w = sized.w * b.w;
-            bbox.h = sized.h * b.h;
+            bbox_t bbox;
+            bbox.x = std::max((double)0, (b.x - b.w / 2.) * im.w);
+            bbox.y = std::max((double)0, (b.y - b.h / 2.) * im.h);
+            bbox.w = b.w * im.w;
+            bbox.h = b.h * im.h;
             bbox.obj_id = obj_id;
             bbox.prob = prob;
             bbox.track_id = 0;
@@ -347,32 +391,34 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(old_gpu_index);
 #endif
+
     return bbox_vec;
 }
 
-std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, const float thresh, const struct layer l, detection* const dets, int nboxes) const
+std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, const float thresh, const struct layer l,
+                                                              detection* const dets, int nboxes) const
 {
     std::vector<bbox_t> bbox_vec;
 #ifdef OPENCV
-    cv::Mat src = detector -> image_to_mat(img);
-    cv::cvtColor(src, src, CV_RGB2BGR);
-    cv::Mat croppedImg; 
+    cv::Mat src = detector->image_to_mat(img);
+    cvtColor(src, src, CV_RGB2BGR);
+    cv::Mat croppedImg;
 #endif
     for (auto i = 0; i < nboxes; ++i)
     {
         const auto b = dets[i].bbox;
         auto const obj_id = max_index(dets[i].prob, l.classes);
         auto const prob = dets[i].prob[obj_id];
-        auto const bbox_x = std::max(static_cast<double>(0), (b.x - b.w / 2.)* img.w);
-        auto const bbox_y = std::max(static_cast<double>(0), (b.y - b.h / 2.)* img.h);
+        auto const bbox_x = std::max(static_cast<double>(0), (b.x - b.w / 2.) * img.w);
+        auto const bbox_y = std::max(static_cast<double>(0), (b.y - b.h / 2.) * img.h);
         auto const bbox_w = img.w * b.w;
         auto const bbox_h = img.h * b.h;
 #ifdef OPENCV
         if (bbox_x - 10 > 0 && bbox_y - 10 > 0 && bbox_w - 30 && bbox_h - 30)
-        croppedImg = src(cv::Rect(bbox_x - 10, bbox_y -10, bbox_w + 30, bbox_h + 30));
+            croppedImg = src(cv::Rect(bbox_x - 10, bbox_y - 10, bbox_w + 30, bbox_h + 30));
         else
             croppedImg = src(cv::Rect(bbox_x, bbox_y, bbox_w, bbox_h));
-        auto shape = detector-> detect_shape(croppedImg);
+        auto shape = detector->detect_shape(croppedImg);
 #endif
         if (prob > thresh)
         {
@@ -395,7 +441,6 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
 #endif
             bbox_vec.push_back(bbox);
         }
-        
     }
     return bbox_vec;
 }
@@ -407,22 +452,23 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     net.wait_stream = wait_stream;
     const auto l = net.layers[net.n - 1];
     network_predict_gpu(net, img.data);
-    
+
     auto nboxes = 0;
     const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
     auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
-    
+
     free_detections(dets, nboxes);
     return bbox_vec;
 }
 
-LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history, int const frames_story, int const max_dist)
+LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history,
+                                                  int const frames_story, int const max_dist)
 {
     auto& det_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
     auto prev_track_id_present = false;
-    unsigned int frame_id  = det_gpu.demo_index++;
+    unsigned int frame_id = det_gpu.demo_index++;
     // TODO: call the shape_detector
     for (auto& i : cur_bbox_vec)
         i.frames_counter = frame_id;
@@ -452,8 +498,8 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
                 auto const& k = cur_bbox_vec[m];
                 if (i.obj_id == k.obj_id)
                 {
-                    auto center_x_diff = (float)(i.x + i.w / 2) - (float)(k.x + k.w / 2);
-                    auto center_y_diff = (float)(i.y + i.h / 2) - (float)(k.y + k.h / 2);
+                    auto center_x_diff = static_cast<float>(i.x + i.w / 2) - static_cast<float>(k.x + k.w / 2);
+                    auto center_y_diff = static_cast<float>(i.y + i.h / 2) - static_cast<float>(k.y + k.h / 2);
                     unsigned int cur_dist = sqrt(center_x_diff * center_x_diff + center_y_diff * center_y_diff);
                     if (cur_dist < max_dist && (k.track_id == 0 || dist_vec[m] > cur_dist))
                     {
@@ -463,7 +509,7 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
                 }
             }
 
-            auto track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(),[&i](bbox_t const& b)
+            auto track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(), [&i](bbox_t const& b)
             {
                 return b.track_id == i.track_id && b.obj_id == i.obj_id;
             });
@@ -496,15 +542,15 @@ shape_type Detector::detect_shape(cv::Mat src)
 
     // Convert to grayscale
     cv::Mat gray;
-    cv::cvtColor(src, gray, CV_BGR2GRAY);
-   
+    cvtColor(src, gray, CV_BGR2GRAY);
+
     // Use Canny instead of threshold to catch squares with gradient shading
     cv::Mat bw;
-    cv::Canny(gray, bw, 0, 50, 5);
-   
+    Canny(gray, bw, 0, 50, 5);
+
     // Find contours
-    std::vector<std::vector<cv::Point> > contours;
-    cv::findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    std::vector<std::vector<cv::Point>> contours;
+    findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     std::vector<cv::Point> approx;
     cv::Mat dst = src.clone();
@@ -513,16 +559,15 @@ shape_type Detector::detect_shape(cv::Mat src)
     {
         // Approximate contour with accuracy proportional
         // to the contour perimeter
-        cv::approxPolyDP(cv::Mat(contours[i]), approx, cv::arcLength(cv::Mat(contours[i]), true) * 0.02, true);
+        approxPolyDP(cv::Mat(contours[i]), approx, arcLength(cv::Mat(contours[i]), true) * 0.02, true);
 
         // Skip small or non-convex objects 
-        if (std::fabs(cv::contourArea(contours[i])) < 100 || !cv::isContourConvex(approx))
-           continue;
+        if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
+            continue;
 
         if (approx.size() == 3)
             return Triangle;
-
-        else if (approx.size() >= 4 && approx.size() <= 6)
+        if (approx.size() >= 4 && approx.size() <= 6)
         {
             // Number of vertices of polygonal curve
             int vtc = approx.size();
@@ -530,7 +575,7 @@ shape_type Detector::detect_shape(cv::Mat src)
             // Get the cosines of all corners
             std::vector<double> cos;
             for (int j = 2; j < vtc + 1; j++)
-                cos.push_back(detector -> shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
+                cos.push_back(detector->shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
 
             // Sort ascending the cosine values
             std::sort(cos.begin(), cos.end());
@@ -543,22 +588,20 @@ shape_type Detector::detect_shape(cv::Mat src)
             // to determine the shape of the contour
             if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
                 return Rectangle;
-
-            else if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
+            if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
                 return Penta;
-
-            else if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45) 
+            if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45)
                 return Hexa;
         }
 
         else
         {
             // Detect and label circles
-            double area = cv::contourArea(contours[i]);
-            cv::Rect r = cv::boundingRect(contours[i]);
+            double area = contourArea(contours[i]);
+            cv::Rect r = boundingRect(contours[i]);
             int radius = r.width / 2;
 
-            if (std::abs(1 - ((double)r.width / r.height)) <= 0.2 &&
+            if (std::abs(1 - (static_cast<double>(r.width) / r.height)) <= 0.2 &&
                 std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
                 return Circle;
         }
@@ -566,7 +609,7 @@ shape_type Detector::detect_shape(cv::Mat src)
     return None;
 }
 
-cv::Mat Detector:: image_to_mat(image img)
+cv::Mat Detector::image_to_mat(image img)
 {
     int channels = img.c;
     int width = img.w;
@@ -574,11 +617,14 @@ cv::Mat Detector:: image_to_mat(image img)
     cv::Mat mat = cv::Mat(height, width, CV_8UC(channels));
     int step = mat.step;
 
-    for (int y = 0; y < img.h; ++y) {
-        for (int x = 0; x < img.w; ++x) {
-            for (int c = 0; c < img.c; ++c) {
+    for (int y = 0; y < img.h; ++y)
+    {
+        for (int x = 0; x < img.w; ++x)
+        {
+            for (int c = 0; c < img.c; ++c)
+            {
                 float val = img.data[c * img.h * img.w + y * img.w + x];
-                mat.data[y * step + x * img.c + c] = (unsigned char)(val * 255);
+                mat.data[y * step + x * img.c + c] = static_cast<unsigned char>(val * 255);
             }
         }
     }

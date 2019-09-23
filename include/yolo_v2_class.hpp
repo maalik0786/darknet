@@ -51,21 +51,22 @@ struct bbox_t_container {
 #include <algorithm>
 #include <chrono>
 #include <string>
-#include <sstream>
 #include <iostream>
 #include <cmath>
 
 #ifdef OPENCV
 #include <opencv2/opencv.hpp>            // C++
-#include <opencv2/highgui/highgui_c.h>   // C
 #include <opencv2/imgproc/imgproc_c.h>   // C
 #endif
 #include <darknet.h>
 
 extern "C" LIB_API int init(const char *configuration_filename, const char *weights_filename, int gpu);
 extern "C" LIB_API int detect_image(const char *filename, bbox_t_container &container);
-extern "C" LIB_API int detect_objects(const float* data, const int width, const int height, bbox_t_container& container);
-extern "C" LIB_API int track_objects(const float* data, const int width, const int height, bbox_t_container & container);
+extern "C" LIB_API int detect_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container);
+extern "C" LIB_API int track_objects(const float* data, const int width, const int height, const int channel, bbox_t_container & container);
+
+extern "C" LIB_API unsigned char* get_image(int capture_width, int capture_height, int display_width, int display_height, int frame_rate, int flip_method);
+
 extern "C" LIB_API int dispose();
 extern "C" LIB_API int get_device_count();
 extern "C" LIB_API int get_device_name(int gpu, char* deviceName);
