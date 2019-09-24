@@ -69,7 +69,7 @@ std::string gstreamer_pipeline(int capture_width, int capture_height, int displa
 
         "/1 ! nvvidconv flip-method=" + std::to_string(flip_method) + " ! video/x-raw, width=(int)" + std::to_string(display_width) + ", height=(int)" +
 
-        std::to_string(display_height) + ", format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)RGB ! appsink";
+        std::to_string(display_height) + ", format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
 #endif
     return "";
 }
@@ -80,7 +80,10 @@ unsigned char* get_image(const int capture_width, const int capture_height, cons
     const auto pipeline = gstreamer_pipeline(capture_width, capture_height, display_width, display_height, frame_rate,
                                              flip_method);
     if (pipeline.empty())
-        return nullptr;
+    {
+	std::cout << "pipeline is empty." << std::endl;
+	return nullptr;
+     }
 
 #if defined(__linux__)
     cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
@@ -90,11 +93,12 @@ unsigned char* get_image(const int capture_width, const int capture_height, cons
     cv::Mat img;
     if (!cap.read(img))
     {
-        //cv::cvtColor(img, img, BGR2RGB);
-        //cv::imwrite("raspberry.jpeg", img);
-        return static_cast<unsigned char*>(img.data);
+	std::cout<<"Capture read error"<<std::endl;
+	return nullptr;
     }
-    return nullptr;
+
+    cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+    return static_cast<unsigned char*>(img.data);
 #endif
 }
 

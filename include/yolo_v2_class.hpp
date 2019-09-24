@@ -99,11 +99,11 @@ public:
 
     LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history = true, int const frames_story = 30, int const max_dist = 40);
 
-#ifdef OPENCV
-		shape_type detect_shape(cv::Mat src);
-		cv::Mat Detector::image_to_mat(image img);
-		double shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0);
-#endif
+//#ifdef OPENCV
+//		shape_type detect_shape(cv::Mat src);
+//		cv::Mat Detector::image_to_mat(image img);
+//		double shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0);
+//#endif
 
     LIB_API void *get_cuda_context() const;
 
