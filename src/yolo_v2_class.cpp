@@ -342,11 +342,9 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     else
         sized = resize_image(im, net.w, net.h);
 
-    layer l = net.layers[net.n - 1];
+    auto l = net.layers[net.n - 1];
 
-    float* X = sized.data;
-
-    float* prediction = network_predict(net, X);
+    const auto prediction = network_predict(net, sized.data);
 
     if (use_mean) {
         memcpy(detector_gpu.predictions[detector_gpu.demo_index], prediction, l.outputs * sizeof(float));
@@ -401,8 +399,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     return bbox_vec;
 }
 
-std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, const float thresh, const struct layer l,
-                                                              detection* const dets, int nboxes) const
+std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, const float thresh, const struct layer l, detection* const dets, int nboxes) const
 {
     std::vector<bbox_t> bbox_vec;
 //#ifdef OPENCV
@@ -468,8 +465,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     return bbox_vec;
 }
 
-LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history,
-                                                  int const frames_story, int const max_dist)
+LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history, int const frames_story, int const max_dist)
 {
     auto& det_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
