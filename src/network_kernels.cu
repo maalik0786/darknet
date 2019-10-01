@@ -480,7 +480,7 @@ float *network_predict_gpu(network net, float *input)
     if (net.gpu_index != cuda_get_device())
         cuda_set_device(net.gpu_index);
     auto size = get_network_input_size(net) * net.batch;
-    printf("network_predict_gpu size %d", size);
+    //printf("network_predict_gpu size %d", size);
     network_state state;
     state.index = 0;
     state.net = net;
