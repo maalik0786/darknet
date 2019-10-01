@@ -90,10 +90,10 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo\
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo\
 
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Debug\netcoreapp3.0\
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Debug\netcoreapp3.0\</Command>
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\x64\Debug\netcoreapp3.0\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\Debug\netcoreapp3.0\</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Outputs>
@@ -147,10 +147,10 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.
       <Optimization>O2</Optimization>
     </CudaLink>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\Alturos.Yolo\yolo_cpp_dll.dll
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\FastYolo\yolo_cpp_dll.dll
 
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\x64\Release\netcoreapp3.0\
-xcopy /y C:\Code\AiInvestResearch\External\Alturos.Yolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\Alturos.Yolo.Tests\bin\Release\netcoreapp3.0\</Command>
+xcopy /y C:\Code\AiInvestResearch\External\FastYolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\x64\Release\netcoreapp3.0\
+xcopy /y C:\Code\AiInvestResearch\External\FastYolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\Release\netcoreapp3.0\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
