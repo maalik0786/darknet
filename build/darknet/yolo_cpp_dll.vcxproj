@@ -86,14 +86,19 @@
       <AssemblyDebug>true</AssemblyDebug>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_75,sm_75;</CodeGeneration>
+      <CodeGeneration>compute_52,sm_52;compute_53,sm_53;compute_75,sm_75;</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <FastMath>true</FastMath>
+      <Optimization>O2</Optimization>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo\
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\github\FastYolo\FastYolo\
 
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\x64\Debug\netcoreapp3.0\
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\Debug\netcoreapp3.0\</Command>
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.Tests\bin\x64\Debug\netcoreapp3.0\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.Tests\bin\Debug\netcoreapp3.0\
+
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\x64\Debug\netcoreapp3.0\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\Debug\netcoreapp3.0\</Command>
     </PostBuildEvent>
     <CustomBuildStep>
       <Outputs>
@@ -108,12 +113,12 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Test
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(OPENCV_DIR);$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>GPU;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GPU;CUDNN;CUDNN_HALF;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CLanguageStandard>c11</CLanguageStandard>
       <CppLanguageStandard>c++1y</CppLanguageStandard>
       <PrecompiledHeaderCompileAs>CompileAsCpp</PrecompiledHeaderCompileAs>
       <CompileAs>Default</CompileAs>
-      <UndefinePreprocessorDefinitions>CUDNN_HALF;CUDNN;OPENCV;</UndefinePreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>OPENCV</UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <DisableSpecificWarnings>
@@ -147,10 +152,13 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Test
       <Optimization>O2</Optimization>
     </CudaLink>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\FastYolo\yolo_cpp_dll.dll
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\github\FastYolo\FastYolo\
 
-xcopy /y C:\Code\AiInvestResearch\External\FastYolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\x64\Release\netcoreapp3.0\
-xcopy /y C:\Code\AiInvestResearch\External\FastYolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\Release\netcoreapp3.0\</Command>
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.Tests\bin\x64\Release\netcoreapp3.0\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.Tests\bin\Release\netcoreapp3.0\
+
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\x64\Release\netcoreapp3.0\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\Release\netcoreapp3.0\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

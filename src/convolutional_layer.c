@@ -316,20 +316,20 @@ void cudnn_convolutional_setup(layer *l, int cudnn_preference)
             0,
             &l->bf_algo));
 
-    if (data_type == CUDNN_DATA_HALF || data_type == CUDNN_DATA_FLOAT)
+    //if (data_type == CUDNN_DATA_HALF || data_type == CUDNN_DATA_FLOAT)
     {
-        if (data_type == CUDNN_DATA_HALF) {
+        //if (data_type == CUDNN_DATA_HALF) {
             l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
             l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
             l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
-        }
+        //}
 
         // FLOAT-32
-        if (data_type == CUDNN_DATA_FLOAT) {
+       /* if (data_type == CUDNN_DATA_FLOAT) {
             l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED;
             l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED;
             l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED;
-        }
+        }*/
     }
 }
 #endif
