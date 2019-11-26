@@ -17,10 +17,8 @@ extern "C" {
 #include <cmath>
 #include <string>
 
-#if defined(__linux__)
 #if OPENCV
 #include <opencv2/opencv.hpp>
-#endif
 #endif
 
 #define NFRAMES 3
@@ -45,7 +43,7 @@ int detect_image(const char* filename, bbox_t_container& container)
 int detect_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container)
 {
     // ReSharper disable once CppCStyleCast
-    auto detection = detector->detect(image_t{height, width, channel, (float*)data});
+    auto detection = detector->detect(image{width, height,  channel, (float*)data});
     for (size_t i = 0; i < detection.size() && i < C_SHARP_MAX_OBJECTS; ++i)
         container.candidates[i] = detection[i];
     return detection.size();
@@ -53,7 +51,7 @@ int detect_objects(const float* data, const int width, const int height, const i
 
 int track_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container)
 {
-    auto tracking = detector->tracking_id(detector->detect(image_t{height, width, channel, (float*)data}));
+    auto tracking = detector->tracking_id(detector->detect(image{width, height, channel, const_cast<float*>(data)}));
     for (size_t i = 0; i < tracking.size() && i < C_SHARP_MAX_OBJECTS; ++i)
         container.candidates[i] = tracking[i];
     return tracking.size();
@@ -355,24 +353,24 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     //get_region_boxes(l, 1, 1, thresh, detector_gpu.probs, detector_gpu.boxes, 0, 0);
     //if (nms) do_nms_sort(detector_gpu.boxes, detector_gpu.probs, l.w*l.h*l.n, l.classes, nms);
 
-    int nboxes = 0;
-    int letterbox = 0;
-    float hier_thresh = 0.5;
-    detection* dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
+    auto nboxes = 0;
+    const auto letterbox = 0;
+    const float hier_thresh = 0.5;
+    const auto dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
 
     std::vector<bbox_t> bbox_vec;
 
-    for (int i = 0; i < nboxes; ++i) {
-        box b = dets[i].bbox;
-        int const obj_id = max_index(dets[i].prob, l.classes);
-        float const prob = dets[i].prob[obj_id];
+    for (auto i = 0; i < nboxes; ++i) {
+        const auto b = dets[i].bbox;
+        auto const obj_id = max_index(dets[i].prob, l.classes);
+        auto const prob = dets[i].prob[obj_id];
 
         if (prob > thresh)
         {
-            bbox_t bbox;
-            bbox.x = std::max((double)0, (b.x - b.w / 2.) * im.w);
-            bbox.y = std::max((double)0, (b.y - b.h / 2.) * im.h);
+            bbox_t bbox{};
+            bbox.x = std::max(static_cast<double>(0), (b.x - b.w / 2.) * im.w);
+            bbox.y = std::max(static_cast<double>(0), (b.y - b.h / 2.) * im.h);
             bbox.w = b.w * im.w;
             bbox.h = b.h * im.h;
             bbox.obj_id = obj_id;
@@ -390,23 +388,16 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     free_detections(dets, nboxes);
     if (sized.data)
         free(sized.data);
-
 #ifdef GPU
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(old_gpu_index);
 #endif
-
     return bbox_vec;
 }
 
 std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, const float thresh, const struct layer l, detection* const dets, int nboxes) const
 {
     std::vector<bbox_t> bbox_vec;
-//#ifdef OPENCV
-//    cv::Mat src = detector->image_to_mat(img);
-//    cvtColor(src, src, CV_RGB2BGR);
-//    cv::Mat croppedImg;
-//#endif
     for (auto i = 0; i < nboxes; ++i)
     {
         const auto b = dets[i].bbox;
@@ -416,13 +407,10 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
         auto const bbox_y = std::max(static_cast<double>(0), (b.y - b.h / 2.) * img.h);
         auto const bbox_w = img.w * b.w;
         auto const bbox_h = img.h * b.h;
-//#ifdef OPENCV
-//        if (bbox_x - 10 > 0 && bbox_y - 10 > 0 && bbox_w - 30 && bbox_h - 30)
-//            croppedImg = src(cv::Rect(bbox_x - 10, bbox_y - 10, bbox_w + 30, bbox_h + 30));
-//        else
-//            croppedImg = src(cv::Rect(bbox_x, bbox_y, bbox_w, bbox_h));
-//        auto shape = detector->detect_shape(croppedImg);
-//#endif
+        auto shape = None;
+#ifdef OPENCV
+        shape = detector->detect_shape(crop_image(img, bbox_x, bbox_y, bbox_w, bbox_h));
+#endif
         if (prob > thresh)
         {
             bbox_t bbox{};
@@ -437,11 +425,7 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
             bbox.x_3d = NAN;
             bbox.y_3d = NAN;
             bbox.z_3d = NAN;
-//#ifdef OPENCV
-//            static_cast<char>(shape);
-//#else
-            static_cast<char>(None);
-//#endif
+            bbox.shape = static_cast<char>(shape);
             bbox_vec.push_back(bbox);
         }
     }
@@ -454,7 +438,14 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     auto& net = detector_gpu.net;
     net.wait_stream = wait_stream;
     const auto l = net.layers[net.n - 1];
-    network_predict_gpu(net, img.data);
+
+    if (net.w != img.w && net.h != img.h)
+    {
+        const auto sized = resize_image(img, net.w, net.h);
+        network_predict_gpu(net, sized.data);
+    }
+    else
+        network_predict_gpu(net, img.data);
 
     auto nboxes = 0;
     const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
@@ -470,14 +461,13 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
     auto& det_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
     auto prev_track_id_present = false;
-    unsigned int frame_id = det_gpu.demo_index++;
-    // TODO: call the shape_detector
+    const unsigned int frame_id = det_gpu.demo_index++;
+
     for (auto& i : cur_bbox_vec)
         i.frames_counter = frame_id;
-    // add shape into vector
 
     for (auto& i : prev_bbox_vec_deque)
-        if (i.size() > 0) prev_track_id_present = true;
+        if (!i.empty()) prev_track_id_present = true;
 
     if (!prev_track_id_present)
     {
@@ -500,9 +490,9 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
                 auto const& k = cur_bbox_vec[m];
                 if (i.obj_id == k.obj_id)
                 {
-                    auto center_x_diff = static_cast<float>(i.x + i.w / 2) - static_cast<float>(k.x + k.w / 2);
-                    auto center_y_diff = static_cast<float>(i.y + i.h / 2) - static_cast<float>(k.y + k.h / 2);
-                    unsigned int cur_dist = sqrt(center_x_diff * center_x_diff + center_y_diff * center_y_diff);
+                    const auto center_x_diff = static_cast<float>(i.x + i.w / 2) - static_cast<float>(k.x + k.w / 2);
+                    const auto center_y_diff = static_cast<float>(i.y + i.h / 2) - static_cast<float>(k.y + k.h / 2);
+                    const unsigned int cur_dist = sqrt(center_x_diff * center_x_diff + center_y_diff * center_y_diff);
                     if (cur_dist < max_dist && (k.track_id == 0 || dist_vec[m] > cur_dist))
                     {
                         dist_vec[m] = cur_dist;
@@ -511,7 +501,7 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
                 }
             }
 
-            auto track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(), [&i](bbox_t const& b)
+            const auto track_id_absent = !std::any_of(cur_bbox_vec.begin(), cur_bbox_vec.end(), [&i](bbox_t const& b)
             {
                 return b.track_id == i.track_id && b.obj_id == i.obj_id;
             });
@@ -537,111 +527,96 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
     return cur_bbox_vec;
 }
 
-//#ifdef OPENCV
-//shape_type Detector::detect_shape(cv::Mat src)
-//{
-//    if (src.empty()) return None;
-//
-//    // Convert to grayscale
-//    cv::Mat gray;
-//    cvtColor(src, gray, CV_BGR2GRAY);
-//
-//    // Use Canny instead of threshold to catch squares with gradient shading
-//    cv::Mat bw;
-//    Canny(gray, bw, 0, 50, 5);
-//
-//    // Find contours
-//    std::vector<std::vector<cv::Point>> contours;
-//    findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-//
-//    std::vector<cv::Point> approx;
-//    cv::Mat dst = src.clone();
-//
-//    for (int i = 0; i < contours.size(); i++)
-//    {
-//        // Approximate contour with accuracy proportional
-//        // to the contour perimeter
-//        approxPolyDP(cv::Mat(contours[i]), approx, arcLength(cv::Mat(contours[i]), true) * 0.02, true);
-//
-//        // Skip small or non-convex objects 
-//        if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
-//            continue;
-//
-//        if (approx.size() == 3)
-//            return Triangle;
-//        if (approx.size() >= 4 && approx.size() <= 6)
-//        {
-//            // Number of vertices of polygonal curve
-//            int vtc = approx.size();
-//
-//            // Get the cosines of all corners
-//            std::vector<double> cos;
-//            for (int j = 2; j < vtc + 1; j++)
-//                cos.push_back(detector->shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
-//
-//            // Sort ascending the cosine values
-//            std::sort(cos.begin(), cos.end());
-//
-//            // Get the lowest and the highest cosine
-//            double mincos = cos.front();
-//            double maxcos = cos.back();
-//
-//            // Use the degrees obtained above and the number of vertices
-//            // to determine the shape of the contour
-//            if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
-//                return Rectangle;
-//            if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27)
-//                return Penta;
-//            if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45)
-//                return Hexa;
-//        }
-//
-//        else
-//        {
-//            // Detect and label circles
-//            double area = contourArea(contours[i]);
-//            cv::Rect r = boundingRect(contours[i]);
-//            int radius = r.width / 2;
-//
-//            if (std::abs(1 - (static_cast<double>(r.width) / r.height)) <= 0.2 &&
-//                std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
-//                return Circle;
-//        }
-//    }
-//    return None;
-//}
-//
-//cv::Mat Detector::image_to_mat(image img)
-//{
-//    int channels = img.c;
-//    int width = img.w;
-//    int height = img.h;
-//    cv::Mat mat = cv::Mat(height, width, CV_8UC(channels));
-//    int step = mat.step;
-//
-//    for (int y = 0; y < img.h; ++y)
-//    {
-//        for (int x = 0; x < img.w; ++x)
-//        {
-//            for (int c = 0; c < img.c; ++c)
-//            {
-//                float val = img.data[c * img.h * img.w + y * img.w + x];
-//                mat.data[y * step + x * img.c + c] = static_cast<unsigned char>(val * 255);
-//            }
-//        }
-//    }
-//    return mat;
-//}
-//
-//double Detector::shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
-//{
-//    double dx1 = pt1.x - pt0.x;
-//    double dy1 = pt1.y - pt0.y;
-//    double dx2 = pt2.x - pt0.x;
-//    double dy2 = pt2.y - pt0.y;
-//    return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
-//}
-//#endif
+#ifdef OPENCV
+shape_type Detector::detect_shape(image src) const
+{
+    auto type = None;
+    // Use Canny instead of threshold to catch squares with gradient shading
+    cv::Mat bw;
+    cv::Mat gray;
+    cvtColor(image_to_mat(src), gray, CV_RGB2GRAY);
+    Canny(gray, bw, 0, 50, 3);
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    findContours(bw.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+    std::vector<cv::Point> approx;
+
+    for (const auto& contour : contours)
+    {
+        // Approximate contour with accuracy proportional
+        // to the contour perimeter
+        approxPolyDP(cv::Mat(contour), approx, arcLength(cv::Mat(contour), true) * 0.02, true);
+
+        // Skip small or non-convex objects 
+        //if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
+         //   continue;
+
+        if (approx.size() == 3)
+            type = Triangle;
+        if (approx.size() >= 4 && approx.size() <= 6)
+        {
+            // Number of vertices of polygonal curve
+            const int vtc = approx.size();
+
+            // Get the cosines of all corners
+            std::vector<double> cos;
+            for (auto j = 2; j < vtc + 1; j++)
+                cos.push_back(shape_angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
+
+            // Sort ascending the cosine values
+            std::sort(cos.begin(), cos.end());
+
+            // Get the lowest and the highest cosine
+            const auto mincos = cos.front();
+            const auto maxcos = cos.back();
+
+            // Use the degrees obtained above and the number of vertices
+            // to determine the shape of the contour
+            if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3) type = Rectangle;
+            if (vtc == 5 && mincos >= -0.34 && maxcos <= -0.27) type = Penta;
+            if (vtc == 6 && mincos >= -0.55 && maxcos <= -0.45) type = Hexa;
+        }
+
+        else
+        {
+            // Detect and label circles
+            const auto area = contourArea(contour);
+            const auto r = boundingRect(contour);
+            const auto radius = r.width / 2;
+
+            if (std::abs(1 - (static_cast<double>(r.width) / r.height)) <= 0.2 &&
+                std::abs(1 - (area / (CV_PI * std::pow(radius, 2)))) <= 0.2)
+                type = Circle;
+        }
+    }
+    return type;
+}
+
+cv::Mat Detector::image_to_mat(image img)
+{
+    auto mat = cv::Mat(img.h, img.w, CV_8UC(img.c));
+    for (auto y = 0; y < img.h; ++y){
+        for (auto x = 0; x < img.w; ++x){
+            for (auto c = 0; c < img.c; ++c){
+                const auto val = img.data[c * img.h * img.w + y * img.w + x];
+                mat.data[y * mat.step + img.c * x + c] = static_cast<unsigned char>(val * 255);
+            }
+        }
+    }
+    return mat;
+}
+
+double Detector::shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0) const
+{
+    const double dx1 = pt1.x - pt0.x;
+    const double dy1 = pt1.y - pt0.y;
+    const double dx2 = pt2.x - pt0.x;
+    const double dy2 = pt2.y - pt0.y;
+    return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
+}
+#endif // OPENCV
 
 void* Detector::get_cuda_context() const
 {
@@ -650,12 +625,9 @@ void* Detector::get_cuda_context() const
     cudaGetDevice(&old_gpu_index);
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(cur_gpu_id);
-
-    auto cuda_context = cuda_get_context();
-
+    const auto cuda_context = cuda_get_context();
     if (cur_gpu_id != old_gpu_index)
         cudaSetDevice(old_gpu_index);
-
     return cuda_context;
 #else   // GPU
     return NULL;
