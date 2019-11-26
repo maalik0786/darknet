@@ -18,8 +18,7 @@ layer make_batchnorm_layer(int batch, int w, int h, int c)
 
     layer.scales = (float*)calloc(c, sizeof(float));
     layer.scale_updates = (float*)calloc(c, sizeof(float));
-    int i;
-    for(i = 0; i < c; ++i){
+    for(int i = 0; i < c; ++i){
         layer.scales[i] = 1;
     }
 
@@ -64,12 +63,11 @@ layer make_batchnorm_layer(int batch, int w, int h, int c)
 
 void backward_scale_cpu(float *x_norm, float *delta, int batch, int n, int size, float *scale_updates)
 {
-    int i,b,f;
-    for(f = 0; f < n; ++f){
+    for(int f = 0; f < n; ++f){
         float sum = 0;
-        for(b = 0; b < batch; ++b){
-            for(i = 0; i < size; ++i){
-                int index = i + size*(f + n*b);
+        for(int b = 0; b < batch; ++b){
+            for(int i = 0; i < size; ++i){
+                const int index = i + size*(f + n*b);
                 sum += delta[index] * x_norm[index];
             }
         }
@@ -79,13 +77,11 @@ void backward_scale_cpu(float *x_norm, float *delta, int batch, int n, int size,
 
 void mean_delta_cpu(float *delta, float *variance, int batch, int filters, int spatial, float *mean_delta)
 {
-
-    int i,j,k;
-    for(i = 0; i < filters; ++i){
+    for(int i = 0; i < filters; ++i){
         mean_delta[i] = 0;
-        for (j = 0; j < batch; ++j) {
-            for (k = 0; k < spatial; ++k) {
-                int index = j*filters*spatial + i*spatial + k;
+        for (int j = 0; j < batch; ++j) {
+            for (int k = 0; k < spatial; ++k) {
+                const int index = j*filters*spatial + i*spatial + k;
                 mean_delta[i] += delta[index];
             }
         }
@@ -94,13 +90,11 @@ void mean_delta_cpu(float *delta, float *variance, int batch, int filters, int s
 }
 void  variance_delta_cpu(float *x, float *delta, float *mean, float *variance, int batch, int filters, int spatial, float *variance_delta)
 {
-
-    int i,j,k;
-    for(i = 0; i < filters; ++i){
+    for(int i = 0; i < filters; ++i){
         variance_delta[i] = 0;
-        for(j = 0; j < batch; ++j){
-            for(k = 0; k < spatial; ++k){
-                int index = j*filters*spatial + i*spatial + k;
+        for(int j = 0; j < batch; ++j){
+            for(int k = 0; k < spatial; ++k){
+                const int index = j*filters*spatial + i*spatial + k;
                 variance_delta[i] += delta[index]*(x[index] - mean[i]);
             }
         }
@@ -109,11 +103,10 @@ void  variance_delta_cpu(float *x, float *delta, float *mean, float *variance, i
 }
 void normalize_delta_cpu(float *x, float *mean, float *variance, float *mean_delta, float *variance_delta, int batch, int filters, int spatial, float *delta)
 {
-    int f, j, k;
-    for(j = 0; j < batch; ++j){
-        for(f = 0; f < filters; ++f){
-            for(k = 0; k < spatial; ++k){
-                int index = j*filters*spatial + f*spatial + k;
+    for(int j = 0; j < batch; ++j){
+        for(int f = 0; f < filters; ++f){
+            for(int k = 0; k < spatial; ++k){
+                const int index = j*filters*spatial + f*spatial + k;
                 delta[index] = delta[index] * 1./(sqrt(variance[f]) + .00001f) + variance_delta[f] * 2. * (x[index] - mean[f]) / (spatial * batch) + mean_delta[f]/(spatial*batch);
             }
         }

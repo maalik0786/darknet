@@ -8,22 +8,21 @@
 #include <string.h>
 void reorg_cpu(float *x, int out_w, int out_h, int out_c, int batch, int stride, int forward, float *out)
 {
-    int b,i,j,k;
-    int in_c = out_c/(stride*stride);
+    const int in_c = out_c/(stride*stride);
 
     //printf("\n out_c = %d, out_w = %d, out_h = %d, stride = %d, forward = %d \n", out_c, out_w, out_h, stride, forward);
     //printf("  in_c = %d,  in_w = %d,  in_h = %d \n", in_c, out_w*stride, out_h*stride);
 
-    for(b = 0; b < batch; ++b){
-        for(k = 0; k < out_c; ++k){
-            for(j = 0; j < out_h; ++j){
-                for(i = 0; i < out_w; ++i){
-                    int in_index  = i + out_w*(j + out_h*(k + out_c*b));
-                    int c2 = k % in_c;
-                    int offset = k / in_c;
-                    int w2 = i*stride + offset % stride;
-                    int h2 = j*stride + offset / stride;
-                    int out_index = w2 + out_w*stride*(h2 + out_h*stride*(c2 + in_c*b));
+    for(int b = 0; b < batch; ++b){
+        for(int k = 0; k < out_c; ++k){
+            for(int j = 0; j < out_h; ++j){
+                for(int i = 0; i < out_w; ++i){
+                    const int in_index  = i + out_w*(j + out_h*(k + out_c*b));
+                    const int c2 = k % in_c;
+                    const int offset = k / in_c;
+                    const int w2 = i*stride + offset % stride;
+                    const int h2 = j*stride + offset / stride;
+                    const int out_index = w2 + out_w*stride*(h2 + out_h*stride*(c2 + in_c*b));
                     if(forward) out[out_index] = x[in_index];    // used by default for forward (i.e. forward = 0)
                     else out[in_index] = x[out_index];
                 }
@@ -35,12 +34,11 @@ void reorg_cpu(float *x, int out_w, int out_h, int out_c, int batch, int stride,
 void flatten(float *x, int size, int layers, int batch, int forward)
 {
     float* swap = (float*)calloc(size * layers * batch, sizeof(float));
-    int i,c,b;
-    for(b = 0; b < batch; ++b){
-        for(c = 0; c < layers; ++c){
-            for(i = 0; i < size; ++i){
-                int i1 = b*layers*size + c*size + i;
-                int i2 = b*layers*size + i*layers + c;
+    for(int b = 0; b < batch; ++b){
+        for(int c = 0; c < layers; ++c){
+            for(int i = 0; i < size; ++i){
+                const int i1 = b*layers*size + c*size + i;
+                const int i2 = b*layers*size + i*layers + c;
                 if (forward) swap[i2] = x[i1];
                 else swap[i1] = x[i2];
             }
@@ -52,16 +50,14 @@ void flatten(float *x, int size, int layers, int batch, int forward)
 
 void weighted_sum_cpu(float *a, float *b, float *s, int n, float *c)
 {
-    int i;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         c[i] = s[i]*a[i] + (1-s[i])*(b ? b[i] : 0);
     }
 }
 
 void weighted_delta_cpu(float *a, float *b, float *s, float *da, float *db, float *ds, int n, float *dc)
 {
-    int i;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         if(da) da[i] += dc[i] * s[i];
         if(db) db[i] += dc[i] * (1-s[i]);
         ds[i] += dc[i] * (a[i] - b[i]);
@@ -76,17 +72,16 @@ void shortcut_cpu(int batch, int w1, int h1, int c1, float *add, int w2, int h2,
     assert(sample == h2/h1);
     if(stride < 1) stride = 1;
     if(sample < 1) sample = 1;
-    int minw = (w1 < w2) ? w1 : w2;
-    int minh = (h1 < h2) ? h1 : h2;
-    int minc = (c1 < c2) ? c1 : c2;
+    const int minw = (w1 < w2) ? w1 : w2;
+    const int minh = (h1 < h2) ? h1 : h2;
+    const int minc = (c1 < c2) ? c1 : c2;
 
-    int i,j,k,b;
-    for(b = 0; b < batch; ++b){
-        for(k = 0; k < minc; ++k){
-            for(j = 0; j < minh; ++j){
-                for(i = 0; i < minw; ++i){
-                    int out_index = i*sample + w2*(j*sample + h2*(k + c2*b));
-                    int add_index = i*stride + w1*(j*stride + h1*(k + c1*b));
+    for(int b = 0; b < batch; ++b){
+        for(int k = 0; k < minc; ++k){
+            for(int j = 0; j < minh; ++j){
+                for(int i = 0; i < minw; ++i){
+                    const int out_index = i*sample + w2*(j*sample + h2*(k + c2*b));
+                    const int add_index = i*stride + w1*(j*stride + h1*(k + c1*b));
                     out[out_index] += add[add_index];
                 }
             }
@@ -96,13 +91,12 @@ void shortcut_cpu(int batch, int w1, int h1, int c1, float *add, int w2, int h2,
 
 void mean_cpu(float *x, int batch, int filters, int spatial, float *mean)
 {
-    float scale = 1./(batch * spatial);
-    int i,j,k;
-    for(i = 0; i < filters; ++i){
+    const float scale = 1./(batch * spatial);
+    for(int i = 0; i < filters; ++i){
         mean[i] = 0;
-        for(j = 0; j < batch; ++j){
-            for(k = 0; k < spatial; ++k){
-                int index = j*filters*spatial + i*spatial + k;
+        for(int j = 0; j < batch; ++j){
+            for(int k = 0; k < spatial; ++k){
+                const int index = j*filters*spatial + i*spatial + k;
                 mean[i] += x[index];
             }
         }
@@ -112,13 +106,12 @@ void mean_cpu(float *x, int batch, int filters, int spatial, float *mean)
 
 void variance_cpu(float *x, float *mean, int batch, int filters, int spatial, float *variance)
 {
-    float scale = 1./(batch * spatial - 1);
-    int i,j,k;
-    for(i = 0; i < filters; ++i){
+    const float scale = 1./(batch * spatial - 1);
+    for(int i = 0; i < filters; ++i){
         variance[i] = 0;
-        for(j = 0; j < batch; ++j){
-            for(k = 0; k < spatial; ++k){
-                int index = j*filters*spatial + i*spatial + k;
+        for(int j = 0; j < batch; ++j){
+            for(int k = 0; k < spatial; ++k){
+                const int index = j*filters*spatial + i*spatial + k;
                 variance[i] += pow((x[index] - mean[i]), 2);
             }
         }
@@ -128,11 +121,10 @@ void variance_cpu(float *x, float *mean, int batch, int filters, int spatial, fl
 
 void normalize_cpu(float *x, float *mean, float *variance, int batch, int filters, int spatial)
 {
-    int b, f, i;
-    for(b = 0; b < batch; ++b){
-        for(f = 0; f < filters; ++f){
-            for(i = 0; i < spatial; ++i){
-                int index = b*filters*spatial + f*spatial + i;
+    for(int b = 0; b < batch; ++b){
+        for(int f = 0; f < filters; ++f){
+            for(int i = 0; i < spatial; ++i){
+                const int index = b*filters*spatial + f*spatial + i;
                 x[index] = (x[index] - mean[f])/(sqrt(variance[f]) + .000001f);
             }
         }
@@ -141,56 +133,49 @@ void normalize_cpu(float *x, float *mean, float *variance, int batch, int filter
 
 void const_cpu(int N, float ALPHA, float *X, int INCX)
 {
-    int i;
-    for(i = 0; i < N; ++i) X[i*INCX] = ALPHA;
+    for(int i = 0; i < N; ++i) X[i*INCX] = ALPHA;
 }
 
 void mul_cpu(int N, float *X, int INCX, float *Y, int INCY)
 {
-    int i;
-    for(i = 0; i < N; ++i) Y[i*INCY] *= X[i*INCX];
+    for(int i = 0; i < N; ++i) Y[i*INCY] *= X[i*INCX];
 }
 
 void pow_cpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY)
 {
-    int i;
-    for(i = 0; i < N; ++i) Y[i*INCY] = pow(X[i*INCX], ALPHA);
+    for(int i = 0; i < N; ++i) Y[i*INCY] = pow(X[i*INCX], ALPHA);
 }
 
 void axpy_cpu(int N, float ALPHA, float *X, int INCX, float *Y, int INCY)
 {
-    int i;
-    for(i = 0; i < N; ++i) Y[i*INCY] += ALPHA*X[i*INCX];
+    for(int i = 0; i < N; ++i) Y[i*INCY] += ALPHA*X[i*INCX];
 }
 
 void scal_cpu(int N, float ALPHA, float *X, int INCX)
 {
-    int i;
-    for(i = 0; i < N; ++i) X[i*INCX] *= ALPHA;
+    for(int i = 0; i < N; ++i) X[i*INCX] *= ALPHA;
 }
 
 void scal_add_cpu(int N, float ALPHA, float BETA, float *X, int INCX)
 {
-    int i;
-    for (i = 0; i < N; ++i) X[i*INCX] = X[i*INCX] * ALPHA + BETA;
+    for (int i = 0; i < N; ++i) X[i*INCX] = X[i*INCX] * ALPHA + BETA;
 }
 
 void fill_cpu(int N, float ALPHA, float *X, int INCX)
 {
-    int i;
     if (INCX == 1 && ALPHA == 0) {
         memset(X, 0, N * sizeof(float));
     }
     else {
-        for (i = 0; i < N; ++i) X[i*INCX] = ALPHA;
+        for (int i = 0; i < N; ++i) X[i*INCX] = ALPHA;
     }
 }
 
 void deinter_cpu(int NX, float *X, int NY, float *Y, int B, float *OUT)
 {
-    int i, j;
+    int i;
     int index = 0;
-    for(j = 0; j < B; ++j) {
+    for(int j = 0; j < B; ++j) {
         for(i = 0; i < NX; ++i){
             if(X) X[j*NX + i] += OUT[index];
             ++index;
@@ -204,9 +189,9 @@ void deinter_cpu(int NX, float *X, int NY, float *Y, int B, float *OUT)
 
 void inter_cpu(int NX, float *X, int NY, float *Y, int B, float *OUT)
 {
-    int i, j;
+    int i;
     int index = 0;
-    for(j = 0; j < B; ++j) {
+    for(int j = 0; j < B; ++j) {
         for(i = 0; i < NX; ++i){
             OUT[index++] = X[j*NX + i];
         }
@@ -218,22 +203,19 @@ void inter_cpu(int NX, float *X, int NY, float *Y, int B, float *OUT)
 
 void copy_cpu(int N, float *X, int INCX, float *Y, int INCY)
 {
-    int i;
-    for(i = 0; i < N; ++i) Y[i*INCY] = X[i*INCX];
+    for(int i = 0; i < N; ++i) Y[i*INCY] = X[i*INCX];
 }
 
 void mult_add_into_cpu(int N, float *X, float *Y, float *Z)
 {
-    int i;
-    for(i = 0; i < N; ++i) Z[i] += X[i]*Y[i];
+    for(int i = 0; i < N; ++i) Z[i] += X[i]*Y[i];
 }
 
 void smooth_l1_cpu(int n, float *pred, float *truth, float *delta, float *error)
 {
-    int i;
-    for(i = 0; i < n; ++i){
-        float diff = truth[i] - pred[i];
-        float abs_val = fabs(diff);
+    for(int i = 0; i < n; ++i){
+        const float diff = truth[i] - pred[i];
+        const float abs_val = fabs(diff);
         if(abs_val < 1) {
             error[i] = diff * diff;
             delta[i] = diff;
@@ -247,9 +229,8 @@ void smooth_l1_cpu(int n, float *pred, float *truth, float *delta, float *error)
 
 void l1_cpu(int n, float *pred, float *truth, float *delta, float *error)
 {
-    int i;
-    for(i = 0; i < n; ++i){
-        float diff = truth[i] - pred[i];
+    for(int i = 0; i < n; ++i){
+        const float diff = truth[i] - pred[i];
         error[i] = fabs(diff);
         delta[i] = diff > 0 ? 1 : -1;
     }
@@ -257,10 +238,9 @@ void l1_cpu(int n, float *pred, float *truth, float *delta, float *error)
 
 void softmax_x_ent_cpu(int n, float *pred, float *truth, float *delta, float *error)
 {
-    int i;
-    for(i = 0; i < n; ++i){
-        float t = truth[i];
-        float p = pred[i];
+    for(int i = 0; i < n; ++i){
+        const float t = truth[i];
+        const float p = pred[i];
         error[i] = (t) ? -log(p) : 0;
         delta[i] = t-p;
     }
@@ -268,10 +248,9 @@ void softmax_x_ent_cpu(int n, float *pred, float *truth, float *delta, float *er
 
 void logistic_x_ent_cpu(int n, float *pred, float *truth, float *delta, float *error)
 {
-    int i;
-    for(i = 0; i < n; ++i){
-        float t = truth[i];
-        float p = pred[i];
+    for(int i = 0; i < n; ++i){
+        const float t = truth[i];
+        const float p = pred[i];
         error[i] = -t*log(p) - (1-t)*log(1-p);
         delta[i] = t-p;
     }
@@ -279,9 +258,8 @@ void logistic_x_ent_cpu(int n, float *pred, float *truth, float *delta, float *e
 
 void l2_cpu(int n, float *pred, float *truth, float *delta, float *error)
 {
-    int i;
-    for(i = 0; i < n; ++i){
-        float diff = truth[i] - pred[i];
+    for(int i = 0; i < n; ++i){
+        const float diff = truth[i] - pred[i];
         error[i] = diff * diff;
         delta[i] = diff;
     }
@@ -289,9 +267,8 @@ void l2_cpu(int n, float *pred, float *truth, float *delta, float *error)
 
 float dot_cpu(int N, float *X, int INCX, float *Y, int INCY)
 {
-    int i;
     float dot = 0;
-    for(i = 0; i < N; ++i) dot += X[i*INCX] * Y[i*INCY];
+    for(int i = 0; i < N; ++i) dot += X[i*INCX] * Y[i*INCY];
     return dot;
 }
 
@@ -304,7 +281,7 @@ void softmax(float *input, int n, float temp, float *output, int stride)
         if(input[i*stride] > largest) largest = input[i*stride];
     }
     for(i = 0; i < n; ++i){
-        float e = exp(input[i*stride]/temp - largest/temp);
+        const float e = exp(input[i*stride]/temp - largest/temp);
         sum += e;
         output[i*stride] = e;
     }
@@ -316,9 +293,8 @@ void softmax(float *input, int n, float temp, float *output, int stride)
 
 void softmax_cpu(float *input, int n, int batch, int batch_offset, int groups, int group_offset, int stride, float temp, float *output)
 {
-    int g, b;
-    for(b = 0; b < batch; ++b){
-        for(g = 0; g < groups; ++g){
+    for(int b = 0; b < batch; ++b){
+        for(int g = 0; g < groups; ++g){
             softmax(input + b*batch_offset + g*group_offset, n, temp, output + b*batch_offset + g*group_offset, stride);
         }
     }
@@ -326,13 +302,12 @@ void softmax_cpu(float *input, int n, int batch, int batch_offset, int groups, i
 
 void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int forward, float scale, float *out)
 {
-    int i, j, k, b;
-    for (b = 0; b < batch; ++b) {
-        for (k = 0; k < c; ++k) {
-            for (j = 0; j < h*stride; ++j) {
-                for (i = 0; i < w*stride; ++i) {
-                    int in_index = b*w*h*c + k*w*h + (j / stride)*w + i / stride;
-                    int out_index = b*w*h*c*stride*stride + k*w*h*stride*stride + j*w*stride + i;
+    for (int b = 0; b < batch; ++b) {
+        for (int k = 0; k < c; ++k) {
+            for (int j = 0; j < h*stride; ++j) {
+                for (int i = 0; i < w*stride; ++i) {
+                    const int in_index = b*w*h*c + k*w*h + (j / stride)*w + i / stride;
+                    const int out_index = b*w*h*c*stride*stride + k*w*h*stride*stride + j*w*stride + i;
                     if (forward) out[out_index] = scale*in[in_index];
                     else in[in_index] += scale*out[out_index];
                 }
@@ -344,16 +319,14 @@ void upsample_cpu(float *in, int w, int h, int c, int batch, int stride, int for
 
 void constrain_cpu(int size, float ALPHA, float *X)
 {
-    int i;
-    for (i = 0; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
         X[i] = fminf(ALPHA, fmaxf(-ALPHA, X[i]));
     }
 }
 
 void fix_nan_and_inf_cpu(float *input, size_t size)
 {
-    int i;
-    for (i = 0; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
         float val = input[i];
         if (isnan(val) || isinf(val))
             input[i] = 1.0f / i;  // pseudo random value

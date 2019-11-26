@@ -18,8 +18,7 @@ float validate_classifier_single(char *datacfg, char *filename, char *weightfile
 float *get_regression_values(char **labels, int n)
 {
     float* v = (float*)calloc(n, sizeof(float));
-    int i;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         char *p = strchr(labels[i], ' ');
         *p = 0;
         v[i] = atof(p+1);
@@ -1236,14 +1235,14 @@ void run_classifier(int argc, char **argv)
         return;
     }
 
-    int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
+    const int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
     char *gpu_list = find_char_arg(argc, argv, "-gpus", 0);
     int *gpus = 0;
     int gpu = 0;
     int ngpus = 0;
     if(gpu_list){
         printf("%s\n", gpu_list);
-        int len = strlen(gpu_list);
+        const int len = strlen(gpu_list);
         ngpus = 1;
         int i;
         for(i = 0; i < len; ++i){
@@ -1260,17 +1259,17 @@ void run_classifier(int argc, char **argv)
         ngpus = 1;
     }
 
-    int dont_show = find_arg(argc, argv, "-dont_show");
-    int calc_topk = find_arg(argc, argv, "-topk");
-    int cam_index = find_int_arg(argc, argv, "-c", 0);
-    int top = find_int_arg(argc, argv, "-t", 0);
-    int clear = find_arg(argc, argv, "-clear");
+    const int dont_show = find_arg(argc, argv, "-dont_show");
+    const int calc_topk = find_arg(argc, argv, "-topk");
+    const int cam_index = find_int_arg(argc, argv, "-c", 0);
+    const int top = find_int_arg(argc, argv, "-t", 0);
+    const int clear = find_arg(argc, argv, "-clear");
     char *data = argv[3];
     char *cfg = argv[4];
     char *weights = (argc > 5) ? argv[5] : 0;
     char *filename = (argc > 6) ? argv[6]: 0;
     char *layer_s = (argc > 7) ? argv[7]: 0;
-    int layer = layer_s ? atoi(layer_s) : -1;
+    const int layer = layer_s ? atoi(layer_s) : -1;
     if(0==strcmp(argv[2], "predict")) predict_classifier(data, cfg, weights, filename, top);
     else if(0==strcmp(argv[2], "try")) try_classifier(data, cfg, weights, filename, atoi(layer_s));
     else if(0==strcmp(argv[2], "train")) train_classifier(data, cfg, weights, gpus, ngpus, clear, dont_show, mjpeg_port, calc_topk);

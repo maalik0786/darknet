@@ -6,12 +6,11 @@ int gettimeofday(struct timeval* tp, struct timezone* tzp)
   static const uint64_t EPOCH = ((uint64_t)116444736000000000ULL);
   SYSTEMTIME system_time;
   FILETIME file_time;
-  uint64_t time;
 
 
   GetSystemTime(&system_time);
   SystemTimeToFileTime(&system_time, &file_time);
-  time = ((uint64_t)file_time.dwLowDateTime);
+  uint64_t time = ((uint64_t)file_time.dwLowDateTime);
   time += ((uint64_t)file_time.dwHighDateTime) << 32;
     /*converting file time to unix epoch*/
   tp->tv_sec = (long)((time - EPOCH) / 10000000L);

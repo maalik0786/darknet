@@ -192,11 +192,11 @@ int bbox_comparator(const void *a, const void *b)
 
 void bbox_update(sortable_bbox *a, sortable_bbox *b, int class_id, int result)
 {
-    int k = 32;
-    float EA = 1./(1+pow(10, (b->elos[class_id] - a->elos[class_id])/400.));
-    float EB = 1./(1+pow(10, (a->elos[class_id] - b->elos[class_id])/400.));
-    float SA = result ? 1 : 0;
-    float SB = result ? 0 : 1;
+    const int k = 32;
+    const float EA = 1./(1+pow(10, (b->elos[class_id] - a->elos[class_id])/400.));
+    const float EB = 1./(1+pow(10, (a->elos[class_id] - b->elos[class_id])/400.));
+    const float SA = result ? 1 : 0;
+    const float SB = result ? 0 : 1;
     a->elos[class_id] += k*(SA - EA);
     b->elos[class_id] += k*(SB - EB);
 }

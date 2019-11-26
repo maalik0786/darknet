@@ -362,9 +362,8 @@ static int get_coco_image_id(char *filename)
 
 static void print_cocos(FILE *fp, char *image_path, detection *dets, int num_boxes, int classes, int w, int h)
 {
-    int i, j;
-    int image_id = get_coco_image_id(image_path);
-    for (i = 0; i < num_boxes; ++i) {
+    const int image_id = get_coco_image_id(image_path);
+    for (int i = 0; i < num_boxes; ++i) {
         float xmin = dets[i].bbox.x - dets[i].bbox.w / 2.;
         float xmax = dets[i].bbox.x + dets[i].bbox.w / 2.;
         float ymin = dets[i].bbox.y - dets[i].bbox.h / 2.;
@@ -375,12 +374,12 @@ static void print_cocos(FILE *fp, char *image_path, detection *dets, int num_box
         if (xmax > w) xmax = w;
         if (ymax > h) ymax = h;
 
-        float bx = xmin;
-        float by = ymin;
-        float bw = xmax - xmin;
-        float bh = ymax - ymin;
+        const float bx = xmin;
+        const float by = ymin;
+        const float bw = xmax - xmin;
+        const float bh = ymax - ymin;
 
-        for (j = 0; j < classes; ++j) {
+        for (int j = 0; j < classes; ++j) {
             if (dets[i].prob[j]) fprintf(fp, "{\"image_id\":%d, \"category_id\":%d, \"bbox\":[%f, %f, %f, %f], \"score\":%f},\n", image_id, coco_ids[j], bx, by, bw, bh, dets[i].prob[j]);
         }
     }
@@ -388,8 +387,7 @@ static void print_cocos(FILE *fp, char *image_path, detection *dets, int num_box
 
 void print_detector_detections(FILE **fps, char *id, detection *dets, int total, int classes, int w, int h)
 {
-    int i, j;
-    for (i = 0; i < total; ++i) {
+    for (int i = 0; i < total; ++i) {
         float xmin = dets[i].bbox.x - dets[i].bbox.w / 2. + 1;
         float xmax = dets[i].bbox.x + dets[i].bbox.w / 2. + 1;
         float ymin = dets[i].bbox.y - dets[i].bbox.h / 2. + 1;
@@ -400,7 +398,7 @@ void print_detector_detections(FILE **fps, char *id, detection *dets, int total,
         if (xmax > w) xmax = w;
         if (ymax > h) ymax = h;
 
-        for (j = 0; j < classes; ++j) {
+        for (int j = 0; j < classes; ++j) {
             if (dets[i].prob[j]) fprintf(fps[j], "%s %f %f %f %f %f\n", id, dets[i].prob[j],
                 xmin, ymin, xmax, ymax);
         }
@@ -409,8 +407,7 @@ void print_detector_detections(FILE **fps, char *id, detection *dets, int total,
 
 void print_imagenet_detections(FILE *fp, int id, detection *dets, int total, int classes, int w, int h)
 {
-    int i, j;
-    for (i = 0; i < total; ++i) {
+    for (int i = 0; i < total; ++i) {
         float xmin = dets[i].bbox.x - dets[i].bbox.w / 2.;
         float xmax = dets[i].bbox.x + dets[i].bbox.w / 2.;
         float ymin = dets[i].bbox.y - dets[i].bbox.h / 2.;
@@ -421,8 +418,8 @@ void print_imagenet_detections(FILE *fp, int id, detection *dets, int total, int
         if (xmax > w) xmax = w;
         if (ymax > h) ymax = h;
 
-        for (j = 0; j < classes; ++j) {
-            int myclass = j;
+        for (int j = 0; j < classes; ++j) {
+            const int myclass = j;
             if (dets[i].prob[myclass]) fprintf(fp, "%d %d %f %f %f %f %f\n", id, j + 1, dets[i].prob[myclass],
                 xmin, ymin, xmax, ymax);
         }
@@ -655,9 +652,9 @@ typedef struct {
 
 int detections_comparator(const void *pa, const void *pb)
 {
-    box_prob a = *(box_prob *)pa;
-    box_prob b = *(box_prob *)pb;
-    float diff = a.p - b.p;
+    const box_prob a = *(box_prob *)pa;
+    const box_prob b = *(box_prob *)pb;
+    const float diff = a.p - b.p;
     if (diff < 0) return 1;
     else if (diff > 0) return -1;
     return 0;
@@ -1108,9 +1105,9 @@ typedef struct {
 
 int anchors_comparator(const void *pa, const void *pb)
 {
-    anchors_t a = *(anchors_t *)pa;
-    anchors_t b = *(anchors_t *)pb;
-    float diff = b.w*b.h - a.w*a.h;
+    const anchors_t a = *(anchors_t *)pa;
+    const anchors_t b = *(anchors_t *)pb;
+    const float diff = b.w*b.h - a.w*a.h;
     if (diff < 0) return 1;
     else if (diff > 0) return -1;
     return 0;
@@ -1120,7 +1117,7 @@ int anchors_data_comparator(const float **pa, const float **pb)
 {
     float *a = (float *)*pa;
     float *b = (float *)*pb;
-    float diff = b[0] * b[1] - a[0] * a[1];
+    const float diff = b[0] * b[1] - a[0] * a[1];
     if (diff < 0) return 1;
     else if (diff > 0) return -1;
     return 0;
@@ -1143,7 +1140,7 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
     list *options = read_data_cfg(datacfg);
     char *train_images = option_find_str(options, "train", "data/train.list");
     list *plist = get_paths(train_images);
-    int number_of_images = plist->size;
+    const int number_of_images = plist->size;
     char **paths = (char **)list_to_array(plist);
 
     srand(time(0));
@@ -1182,9 +1179,7 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
     printf("\n all loaded. \n");
     printf("\n calculating k-means++ ...");
 
-    matrix boxes_data;
-    model anchors_data;
-    boxes_data = make_matrix(number_of_boxes, 2);
+    matrix boxes_data = make_matrix(number_of_boxes, 2);
 
     printf("\n");
     for (i = 0; i < number_of_boxes; ++i) {
@@ -1196,7 +1191,7 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
     // Is used: distance(box, centroid) = 1 - IoU(box, centroid)
 
     // K-means
-    anchors_data = do_kmeans(boxes_data, num_of_clusters);
+    model anchors_data = do_kmeans(boxes_data, num_of_clusters);
 
     qsort((void*)anchors_data.centers.vals, num_of_clusters, 2 * sizeof(float), (__compar_fn_t)anchors_data_comparator);
 
@@ -1215,17 +1210,17 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
         for (j = 0; j < num_of_clusters; ++j) {
             float anchor_w = anchors_data.centers.vals[j][0];   // centers->data.fl[j * 2];
             float anchor_h = anchors_data.centers.vals[j][1];   // centers->data.fl[j * 2 + 1];
-            float min_w = (box_w < anchor_w) ? box_w : anchor_w;
-            float min_h = (box_h < anchor_h) ? box_h : anchor_h;
-            float box_intersect = min_w*min_h;
-            float box_union = box_w*box_h + anchor_w*anchor_h - box_intersect;
-            float iou = box_intersect / box_union;
-            float distance = 1 - iou;
+            const float min_w = (box_w < anchor_w) ? box_w : anchor_w;
+            const float min_h = (box_h < anchor_h) ? box_h : anchor_h;
+            const float box_intersect = min_w*min_h;
+            const float box_union = box_w*box_h + anchor_w*anchor_h - box_intersect;
+            const float iou = box_intersect / box_union;
+            const float distance = 1 - iou;
             if (distance < min_dist) min_dist = distance, cluster_idx = j, best_iou = iou;
         }
 
-        float anchor_w = anchors_data.centers.vals[cluster_idx][0]; //centers->data.fl[cluster_idx * 2];
-        float anchor_h = anchors_data.centers.vals[cluster_idx][1]; //centers->data.fl[cluster_idx * 2 + 1];
+        const float anchor_w = anchors_data.centers.vals[cluster_idx][0]; //centers->data.fl[cluster_idx * 2];
+        const float anchor_h = anchors_data.centers.vals[cluster_idx][1]; //centers->data.fl[cluster_idx * 2 + 1];
         if (best_iou > 1 || best_iou < 0) { // || box_w > width || box_h > height) {
             printf(" Wrong label: i = %d, box_w = %f, box_h = %f, anchor_w = %f, anchor_h = %f, iou = %f \n",
                 i, box_w, box_h, anchor_w, anchor_h, best_iou);
@@ -1241,8 +1236,8 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
         printf("\nSaving anchors to the file: anchors.txt \n");
         printf("anchors = ");
         for (i = 0; i < num_of_clusters; ++i) {
-            float anchor_w = anchors_data.centers.vals[i][0]; //centers->data.fl[i * 2];
-            float anchor_h = anchors_data.centers.vals[i][1]; //centers->data.fl[i * 2 + 1];
+            const float anchor_w = anchors_data.centers.vals[i][0]; //centers->data.fl[i * 2];
+            const float anchor_h = anchors_data.centers.vals[i][1]; //centers->data.fl[i * 2 + 1];
             if (width > 32) sprintf(buff, "%3.0f,%3.0f", anchor_w, anchor_h);
             else sprintf(buff, "%2.4f,%2.4f", anchor_w, anchor_h);
             printf("%s", buff);
@@ -1422,30 +1417,30 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
 
 void run_detector(int argc, char **argv)
 {
-    int dont_show = find_arg(argc, argv, "-dont_show");
-    int show = find_arg(argc, argv, "-show");
-    int letter_box = find_arg(argc, argv, "-letter_box");
-    int calc_map = find_arg(argc, argv, "-map");
-    int map_points = find_int_arg(argc, argv, "-points", 0);
+    const int dont_show = find_arg(argc, argv, "-dont_show");
+    const int show = find_arg(argc, argv, "-show");
+    const int letter_box = find_arg(argc, argv, "-letter_box");
+    const int calc_map = find_arg(argc, argv, "-map");
+    const int map_points = find_int_arg(argc, argv, "-points", 0);
     check_mistakes = find_arg(argc, argv, "-check_mistakes");
-    int show_imgs = find_arg(argc, argv, "-show_imgs");
-    int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
-    int json_port = find_int_arg(argc, argv, "-json_port", -1);
+    const int show_imgs = find_arg(argc, argv, "-show_imgs");
+    const int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
+    const int json_port = find_int_arg(argc, argv, "-json_port", -1);
     char *out_filename = find_char_arg(argc, argv, "-out_filename", 0);
     char *outfile = find_char_arg(argc, argv, "-out", 0);
     char *prefix = find_char_arg(argc, argv, "-prefix", 0);
-    float thresh = find_float_arg(argc, argv, "-thresh", .25);    // 0.24
-    float iou_thresh = find_float_arg(argc, argv, "-iou_thresh", .5);    // 0.5 for mAP
-    float hier_thresh = find_float_arg(argc, argv, "-hier", .5);
-    int cam_index = find_int_arg(argc, argv, "-c", 0);
-    int frame_skip = find_int_arg(argc, argv, "-s", 0);
-    int num_of_clusters = find_int_arg(argc, argv, "-num_of_clusters", 5);
-    int width = find_int_arg(argc, argv, "-width", -1);
-    int height = find_int_arg(argc, argv, "-height", -1);
+    const float thresh = find_float_arg(argc, argv, "-thresh", .25);    // 0.24
+    const float iou_thresh = find_float_arg(argc, argv, "-iou_thresh", .5);    // 0.5 for mAP
+    const float hier_thresh = find_float_arg(argc, argv, "-hier", .5);
+    const int cam_index = find_int_arg(argc, argv, "-c", 0);
+    const int frame_skip = find_int_arg(argc, argv, "-s", 0);
+    const int num_of_clusters = find_int_arg(argc, argv, "-num_of_clusters", 5);
+    const int width = find_int_arg(argc, argv, "-width", -1);
+    const int height = find_int_arg(argc, argv, "-height", -1);
     // extended output in test mode (output of rect bound coords)
     // and for recall mode (extended output table-like format with results for best_class fit)
-    int ext_output = find_arg(argc, argv, "-ext_output");
-    int save_labels = find_arg(argc, argv, "-save_labels");
+    const int ext_output = find_arg(argc, argv, "-ext_output");
+    const int save_labels = find_arg(argc, argv, "-save_labels");
     if (argc < 4) {
         fprintf(stderr, "usage: %s %s [train/test/valid/demo/map] [data] [cfg] [weights (optional)]\n", argv[0], argv[1]);
         return;
@@ -1456,7 +1451,7 @@ void run_detector(int argc, char **argv)
     int ngpus = 0;
     if (gpu_list) {
         printf("%s\n", gpu_list);
-        int len = strlen(gpu_list);
+        const int len = strlen(gpu_list);
         ngpus = 1;
         int i;
         for (i = 0; i < len; ++i) {
@@ -1474,7 +1469,7 @@ void run_detector(int argc, char **argv)
         ngpus = 1;
     }
 
-    int clear = find_arg(argc, argv, "-clear");
+    const int clear = find_arg(argc, argv, "-clear");
 
     char *datacfg = argv[3];
     char *cfg = argv[4];
@@ -1491,7 +1486,7 @@ void run_detector(int argc, char **argv)
     else if (0 == strcmp(argv[2], "calc_anchors")) calc_anchors(datacfg, num_of_clusters, width, height, show);
     else if (0 == strcmp(argv[2], "demo")) {
         list *options = read_data_cfg(datacfg);
-        int classes = option_find_int(options, "classes", 20);
+        const int classes = option_find_int(options, "classes", 20);
         char *name_list = option_find_str(options, "names", "data/names.list");
         char **names = get_labels(name_list);
         if (filename)

@@ -5,17 +5,17 @@
 
 image get_maxpool_image(maxpool_layer l)
 {
-    int h = l.out_h;
-    int w = l.out_w;
-    int c = l.c;
+    const int h = l.out_h;
+    const int w = l.out_w;
+    const int c = l.c;
     return float_to_image(w,h,c,l.output);
 }
 
 image get_maxpool_delta(maxpool_layer l)
 {
-    int h = l.out_h;
-    int w = l.out_w;
-    int c = l.c;
+    const int h = l.out_h;
+    const int w = l.out_w;
+    const int c = l.c;
     return float_to_image(w,h,c,l.delta);
 }
 
@@ -23,8 +23,7 @@ image get_maxpool_delta(maxpool_layer l)
 void cudnn_maxpool_setup(layer *l)
 {
 #ifdef CUDNN
-    cudnnStatus_t maxpool_status;
-    maxpool_status = cudnnCreatePoolingDescriptor(&l->poolingDesc);
+    cudnnStatus_t maxpool_status = cudnnCreatePoolingDescriptor(&l->poolingDesc);
 
     maxpool_status = cudnnSetPooling2dDescriptor(
         l->poolingDesc,
@@ -70,7 +69,7 @@ maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int s
     l.inputs = h*w*c;
     l.size = size;
     l.stride = stride;
-    int output_size = l.out_h * l.out_w * l.out_c * batch;
+    const int output_size = l.out_h * l.out_w * l.out_c * batch;
     l.indexes = (int*)calloc(output_size, sizeof(int));
     l.output = (float*)calloc(output_size, sizeof(float));
     l.delta = (float*)calloc(output_size, sizeof(float));
@@ -100,7 +99,7 @@ void resize_maxpool_layer(maxpool_layer *l, int w, int h)
     l->out_w = (w + l->pad - l->size) / l->stride + 1;
     l->out_h = (h + l->pad - l->size) / l->stride + 1;
     l->outputs = l->out_w * l->out_h * l->out_c;
-    int output_size = l->outputs * l->batch;
+    const int output_size = l->outputs * l->batch;
 
     l->indexes = (int*)realloc(l->indexes, output_size * sizeof(int));
     l->output = (float*)realloc(l->output, output_size * sizeof(float));

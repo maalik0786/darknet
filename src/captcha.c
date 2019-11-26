@@ -4,10 +4,9 @@
 
 void fix_data_captcha(data d, int mask)
 {
-    matrix labels = d.y;
-    int i, j;
-    for(i = 0; i < d.y.rows; ++i){
-        for(j = 0; j < d.y.cols; j += 2){
+    const matrix labels = d.y;
+    for(int i = 0; i < d.y.rows; ++i){
+        for(int j = 0; j < d.y.cols; j += 2){
             if (mask){
                 if(!labels.vals[i][j]){
                     labels.vals[i][j] = SECRET_NUM;

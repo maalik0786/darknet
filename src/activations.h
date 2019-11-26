@@ -77,7 +77,7 @@ static inline float linear_gradient(float x){return 1;}
 static inline float logistic_gradient(float x){return (1-x)*x;}
 static inline float loggy_gradient(float x)
 {
-    float y = (x+1.f)/2.f;
+    const float y = (x+1.f)/2.f;
     return 2*(1-y)*y;
 }
 static inline float stair_gradient(float x)

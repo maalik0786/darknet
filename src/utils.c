@@ -46,21 +46,19 @@ int *read_map(char *filename)
 
 void sorta_shuffle(void *arr, size_t n, size_t size, size_t sections)
 {
-    size_t i;
-    for(i = 0; i < sections; ++i){
-        size_t start = n*i/sections;
-        size_t end = n*(i+1)/sections;
-        size_t num = end-start;
+    for(size_t i = 0; i < sections; ++i){
+        const size_t start = n*i/sections;
+        const size_t end = n*(i+1)/sections;
+        const size_t num = end-start;
         shuffle((char*)arr+(start*size), num, size);
     }
 }
 
 void shuffle(void *arr, size_t n, size_t size)
 {
-    size_t i;
     void* swp = (void*)calloc(1, size);
-    for(i = 0; i < n-1; ++i){
-        size_t j = i + random_gen()/(RAND_MAX / (n-i)+1);
+    for(size_t i = 0; i < n-1; ++i){
+        const size_t j = i + random_gen()/(RAND_MAX / (n-i)+1);
         memcpy(swp,            (char*)arr+(j*size), size);
         memcpy((char*)arr+(j*size), (char*)arr+(i*size), size);
         memcpy((char*)arr+(i*size), swp,          size);
@@ -76,8 +74,7 @@ void del_arg(int argc, char **argv, int index)
 
 int find_arg(int argc, char* argv[], char *arg)
 {
-    int i;
-    for(i = 0; i < argc; ++i) {
+    for(int i = 0; i < argc; ++i) {
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)) {
             del_arg(argc, argv, i);
@@ -89,8 +86,7 @@ int find_arg(int argc, char* argv[], char *arg)
 
 int find_int_arg(int argc, char **argv, char *arg, int def)
 {
-    int i;
-    for(i = 0; i < argc-1; ++i){
+    for(int i = 0; i < argc-1; ++i){
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)){
             def = atoi(argv[i+1]);
@@ -104,8 +100,7 @@ int find_int_arg(int argc, char **argv, char *arg, int def)
 
 float find_float_arg(int argc, char **argv, char *arg, float def)
 {
-    int i;
-    for(i = 0; i < argc-1; ++i){
+    for(int i = 0; i < argc-1; ++i){
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)){
             def = atof(argv[i+1]);
@@ -159,10 +154,9 @@ char int_to_alphanum(int i)
 
 void pm(int M, int N, float *A)
 {
-    int i,j;
-    for(i =0 ; i < M; ++i){
+    for(int i = 0 ; i < M; ++i){
         printf("%d ", i+1);
-        for(j = 0; j < N; ++j){
+        for(int j = 0; j < N; ++j){
             printf("%2.4f, ", A[i*N+j]);
         }
         printf("\n");
@@ -212,8 +206,8 @@ void find_replace_extension(char *str, char *orig, char *rep, char *output)
 
     sprintf(buffer, "%s", str);
     char *p = strstr(buffer, orig);
-    int offset = (p - buffer);
-    int chars_from_end = strlen(buffer) - offset;
+    const int offset = (p - buffer);
+    const int chars_from_end = strlen(buffer) - offset;
     if (!p || chars_from_end != strlen(orig)) {  // Is 'orig' even in 'str' AND is 'orig' found at the end of 'str'?
         sprintf(output, "%s", str);
         free(buffer);
@@ -272,13 +266,13 @@ float sec(clock_t clocks)
 
 void top_k(float *a, int n, int k, int *index)
 {
-    int i,j;
+    int j;
     for(j = 0; j < k; ++j) index[j] = -1;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         int curr = i;
         for(j = 0; j < k; ++j){
             if((index[j] < 0) || a[curr] > a[index[j]]){
-                int swap = curr;
+                const int swap = curr;
                 curr = index[j];
                 index[j] = swap;
             }
@@ -307,11 +301,10 @@ void file_error(char *s)
 
 list *split_str(char *s, char delim)
 {
-    size_t i;
-    size_t len = strlen(s);
+    const size_t len = strlen(s);
     list *l = make_list();
     list_insert(l, s);
-    for(i = 0; i < len; ++i){
+    for(size_t i = 0; i < len; ++i){
         if(s[i] == delim){
             s[i] = '\0';
             list_insert(l, &(s[i+1]));
@@ -322,11 +315,10 @@ list *split_str(char *s, char delim)
 
 void strip(char *s)
 {
-    size_t i;
-    size_t len = strlen(s);
+    const size_t len = strlen(s);
     size_t offset = 0;
-    for(i = 0; i < len; ++i){
-        char c = s[i];
+    for(size_t i = 0; i < len; ++i){
+        const char c = s[i];
         if(c==' '||c=='\t'||c=='\n'||c =='\r'||c==0x0d||c==0x0a) ++offset;
         else s[i-offset] = c;
     }
@@ -336,11 +328,10 @@ void strip(char *s)
 
 void strip_args(char *s)
 {
-    size_t i;
-    size_t len = strlen(s);
+    const size_t len = strlen(s);
     size_t offset = 0;
-    for (i = 0; i < len; ++i) {
-        char c = s[i];
+    for (size_t i = 0; i < len; ++i) {
+        const char c = s[i];
         if (c == '\t' || c == '\n' || c == '\r' || c == 0x0d || c == 0x0a) ++offset;
         else s[i - offset] = c;
     }
@@ -349,11 +340,10 @@ void strip_args(char *s)
 
 void strip_char(char *s, char bad)
 {
-    size_t i;
-    size_t len = strlen(s);
+    const size_t len = strlen(s);
     size_t offset = 0;
-    for(i = 0; i < len; ++i){
-        char c = s[i];
+    for(size_t i = 0; i < len; ++i){
+        const char c = s[i];
         if(c==bad) ++offset;
         else s[i-offset] = c;
     }
@@ -362,8 +352,7 @@ void strip_char(char *s, char bad)
 
 void free_ptrs(void **ptrs, int n)
 {
-    int i;
-    for(i = 0; i < n; ++i) free(ptrs[i]);
+    for(int i = 0; i < n; ++i) free(ptrs[i]);
     free(ptrs);
 }
 
@@ -405,14 +394,14 @@ char *fgetl(FILE *fp)
 int read_int(int fd)
 {
     int n = 0;
-    int next = read(fd, &n, sizeof(int));
+    const int next = read(fd, &n, sizeof(int));
     if(next <= 0) return -1;
     return n;
 }
 
 void write_int(int fd, int n)
 {
-    int next = write(fd, &n, sizeof(int));
+    const int next = write(fd, &n, sizeof(int));
     if(next <= 0) error("read failed");
 }
 
@@ -420,7 +409,7 @@ int read_all_fail(int fd, char *buffer, size_t bytes)
 {
     size_t n = 0;
     while(n < bytes){
-        int next = read(fd, buffer + n, bytes-n);
+        const int next = read(fd, buffer + n, bytes-n);
         if(next <= 0) return 1;
         n += next;
     }
@@ -431,7 +420,7 @@ int write_all_fail(int fd, char *buffer, size_t bytes)
 {
     int n = 0;
     while(n < bytes){
-        int next = write(fd, buffer + n, bytes-n);
+        const int next = write(fd, buffer + n, bytes-n);
         if(next <= 0) return 1;
         n += next;
     }
@@ -442,7 +431,7 @@ void read_all(int fd, char *buffer, size_t bytes)
 {
     size_t n = 0;
     while(n < bytes){
-        int next = read(fd, buffer + n, bytes-n);
+        const int next = read(fd, buffer + n, bytes-n);
         if(next <= 0) error("read failed");
         n += next;
     }
@@ -452,7 +441,7 @@ void write_all(int fd, char *buffer, size_t bytes)
 {
     size_t n = 0;
     while(n < bytes){
-        size_t next = write(fd, buffer + n, bytes-n);
+        const size_t next = write(fd, buffer + n, bytes-n);
         if(next <= 0) error("write failed");
         n += next;
     }
@@ -487,8 +476,7 @@ int count_fields(char *line)
 {
     int count = 0;
     int done = 0;
-    char *c;
-    for(c = line; !done; ++c){
+    for(char* c = line; !done; ++c){
         done = (*c == '\0');
         if(*c == ',' || done) ++count;
     }
@@ -517,9 +505,8 @@ float *parse_fields(char *line, int n)
 
 float sum_array(float *a, int n)
 {
-    int i;
     float sum = 0;
-    for(i = 0; i < n; ++i) sum += a[i];
+    for(int i = 0; i < n; ++i) sum += a[i];
     return sum;
 }
 
@@ -531,9 +518,8 @@ float mean_array(float *a, int n)
 void mean_arrays(float **a, int n, int els, float *avg)
 {
     int i;
-    int j;
     memset(avg, 0, els*sizeof(float));
-    for(j = 0; j < n; ++j){
+    for(int j = 0; j < n; ++j){
         for(i = 0; i < els; ++i){
             avg[i] += a[j][i];
         }
@@ -545,18 +531,17 @@ void mean_arrays(float **a, int n, int els, float *avg)
 
 void print_statistics(float *a, int n)
 {
-    float m = mean_array(a, n);
-    float v = variance_array(a, n);
+    const float m = mean_array(a, n);
+    const float v = variance_array(a, n);
     printf("MSE: %.6f, Mean: %.6f, Variance: %.6f\n", mse_array(a, n), m, v);
 }
 
 float variance_array(float *a, int n)
 {
-    int i;
     float sum = 0;
-    float mean = mean_array(a, n);
-    for(i = 0; i < n; ++i) sum += (a[i] - mean)*(a[i]-mean);
-    float variance = sum/n;
+    const float mean = mean_array(a, n);
+    for(int i = 0; i < n; ++i) sum += (a[i] - mean)*(a[i]-mean);
+    const float variance = sum/n;
     return variance;
 }
 
@@ -576,26 +561,23 @@ float constrain(float min, float max, float a)
 
 float dist_array(float *a, float *b, int n, int sub)
 {
-    int i;
     float sum = 0;
-    for(i = 0; i < n; i += sub) sum += pow(a[i]-b[i], 2);
+    for(int i = 0; i < n; i += sub) sum += pow(a[i]-b[i], 2);
     return sqrt(sum);
 }
 
 float mse_array(float *a, int n)
 {
-    int i;
     float sum = 0;
-    for(i = 0; i < n; ++i) sum += a[i]*a[i];
+    for(int i = 0; i < n; ++i) sum += a[i]*a[i];
     return sqrt(sum/n);
 }
 
 void normalize_array(float *a, int n)
 {
-    int i;
     float mu = mean_array(a,n);
     float sigma = sqrt(variance_array(a,n));
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         a[i] = (a[i] - mu)/sigma;
     }
     mu = mean_array(a,n);
@@ -604,17 +586,15 @@ void normalize_array(float *a, int n)
 
 void translate_array(float *a, int n, float s)
 {
-    int i;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         a[i] += s;
     }
 }
 
 float mag_array(float *a, int n)
 {
-    int i;
     float sum = 0;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         sum += a[i]*a[i];
     }
     return sqrt(sum);
@@ -623,9 +603,8 @@ float mag_array(float *a, int n)
 // indicies to skip is a bit array
 float mag_array_skip(float *a, int n, int * indices_to_skip)
 {
-    int i;
     float sum = 0;
-    for (i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         if (indices_to_skip[i] != 1) {
             sum += a[i] * a[i];
         }
@@ -635,19 +614,17 @@ float mag_array_skip(float *a, int n, int * indices_to_skip)
 
 void scale_array(float *a, int n, float s)
 {
-    int i;
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         a[i] *= s;
     }
 }
 
 int sample_array(float *a, int n)
 {
-    float sum = sum_array(a, n);
+    const float sum = sum_array(a, n);
     scale_array(a, n, 1. / sum);
     float r = rand_uniform(0, 1);
-    int i;
-    for (i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         r = r - a[i];
         if (r <= 0) return i;
     }
@@ -656,12 +633,11 @@ int sample_array(float *a, int n)
 
 int sample_array_custom(float *a, int n)
 {
-    float sum = sum_array(a, n);
+    const float sum = sum_array(a, n);
     scale_array(a, n, 1./sum);
     float r = rand_uniform(0, 1);
-    int start_index = rand_int(0, 0);
-    int i;
-    for(i = 0; i < n; ++i){
+    const int start_index = rand_int(0, 0);
+    for(int i = 0; i < n; ++i){
         r = r - a[(i + start_index) % n];
         if (r <= 0) return i;
     }
@@ -671,9 +647,9 @@ int sample_array_custom(float *a, int n)
 int max_index(float *a, int n)
 {
     if(n <= 0) return -1;
-    int i, max_i = 0;
+    int max_i = 0;
     float max = a[0];
-    for(i = 1; i < n; ++i){
+    for(int i = 1; i < n; ++i){
         if(a[i] > max){
             max = a[i];
             max_i = i;
@@ -687,8 +663,8 @@ int top_max_index(float *a, int n, int k)
     float *values = (float*)calloc(k, sizeof(float));
     int *indexes = (int*)calloc(k, sizeof(int));
     if (n <= 0) return -1;
-    int i, j;
-    for (i = 0; i < n; ++i) {
+    int j;
+    for (int i = 0; i < n; ++i) {
         for (j = 0; j < k; ++j) {
             if (a[i] > values[j]) {
                 values[j] = a[i];
@@ -699,8 +675,8 @@ int top_max_index(float *a, int n, int k)
     }
     int count = 0;
     for (j = 0; j < k; ++j) if (values[j] > 0) count++;
-    int get_index = rand_int(0, count-1);
-    int val = indexes[get_index];
+    const int get_index = rand_int(0, count-1);
+    const int val = indexes[get_index];
     free(indexes);
     free(values);
     return val;
@@ -709,8 +685,7 @@ int top_max_index(float *a, int n, int k)
 
 int int_index(int *a, int val, int n)
 {
-    int i;
-    for (i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         if (a[i] == val) return i;
     }
     return -1;
@@ -719,11 +694,11 @@ int int_index(int *a, int val, int n)
 int rand_int(int min, int max)
 {
     if (max < min){
-        int s = min;
+        const int s = min;
         min = max;
         max = s;
     }
-    int r = (random_gen()%(max - min + 1)) + min;
+    const int r = (random_gen()%(max - min + 1)) + min;
     return r;
 }
 
@@ -775,13 +750,13 @@ size_t rand_size_t()
 float rand_uniform(float min, float max)
 {
     if(max < min){
-        float swap = min;
+        const float swap = min;
         min = max;
         max = swap;
     }
 
 #if (RAND_MAX < 65536)
-        int rnd = rand()*(RAND_MAX + 1) + rand();
+    const int rnd = rand()*(RAND_MAX + 1) + rand();
         return ((float)rnd / (RAND_MAX*RAND_MAX) * (max - min)) + min;
 #else
         return ((float)rand() / RAND_MAX * (max - min)) + min;
@@ -791,18 +766,17 @@ float rand_uniform(float min, float max)
 
 float rand_scale(float s)
 {
-    float scale = rand_uniform_strong(1, s);
+    const float scale = rand_uniform_strong(1, s);
     if(random_gen()%2) return scale;
     return 1./scale;
 }
 
 float **one_hot_encode(float *a, int n, int k)
 {
-    int i;
     float** t = (float**)calloc(n, sizeof(float*));
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         t[i] = (float*)calloc(k, sizeof(float));
-        int index = (int)a[i];
+        const int index = (int)a[i];
         t[i][index] = 1;
     }
     return t;
@@ -834,7 +808,7 @@ float random_float()
 float rand_uniform_strong(float min, float max)
 {
     if (max < min) {
-        float swap = min;
+        const float swap = min;
         min = max;
         max = swap;
     }
@@ -844,7 +818,7 @@ float rand_uniform_strong(float min, float max)
 float rand_precalc_random(float min, float max, float random_part)
 {
     if (max < min) {
-        float swap = min;
+        const float swap = min;
         min = max;
         max = swap;
     }
@@ -869,8 +843,7 @@ unsigned int uint_rand(unsigned int less_than)
 
 int check_array_is_nan(float *arr, int size)
 {
-    int i;
-    for (i = 0; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
         if (isnan(arr[i])) return 1;
     }
     return 0;
@@ -878,8 +851,7 @@ int check_array_is_nan(float *arr, int size)
 
 int check_array_is_inf(float *arr, int size)
 {
-    int i;
-    for (i = 0; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
         if (isinf(arr[i])) return 1;
     }
     return 0;
@@ -893,8 +865,8 @@ int *random_index_order(int min, int max)
         inds[i - min] = i;
     }
     for (i = min; i < max - 1; ++i) {
-        int swap = inds[i - min];
-        int index = i + rand() % (max - i);
+        const int swap = inds[i - min];
+        const int index = i + rand() % (max - i);
         inds[i - min] = inds[index - min];
         inds[index - min] = swap;
     }
@@ -904,9 +876,9 @@ int *random_index_order(int min, int max)
 int max_int_index(int *a, int n)
 {
     if (n <= 0) return -1;
-    int i, max_i = 0;
+    int max_i = 0;
     int max = a[0];
-    for (i = 1; i < n; ++i) {
+    for (int i = 1; i < n; ++i) {
         if (a[i] > max) {
             max = a[i];
             max_i = i;

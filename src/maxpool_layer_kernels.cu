@@ -18,14 +18,13 @@ __global__ void forward_maxpool_depth_layer_kernel(int n, int w, int h, int c, i
     //id = id / out_c;
     int b = id % batch;
 
-    int k;
-    for (int g = 0; g < out_c; ++g)
+    for (auto g = 0; g < out_c; ++g)
     {
         int out_index = j + w*(i + h*(g + out_c*b));
-        float max = -FLT_MAX;
-        int max_i = -1;
+        auto max = -FLT_MAX;
+        auto max_i = -1;
 
-        for (k = g; k < c; k += out_c)
+        for (int k = g; k < c; k += out_c)
         {
             int in_index = j + w*(i + h*(k + c*b));
             float val = input[in_index];
@@ -51,9 +50,9 @@ __global__ void backward_maxpool_depth_layer_kernel(int n, int w, int h, int c, 
 
 __global__ void forward_maxpool_layer_kernel(int n, int in_h, int in_w, int in_c, int stride, int size, int pad, float *input, float *output, int *indexes)
 {
-    int h = (in_h + pad - size) / stride + 1;
-    int w = (in_w + pad - size) / stride + 1;
-    int c = in_c;
+    auto h = (in_h + pad - size) / stride + 1;
+    auto w = (in_w + pad - size) / stride + 1;
+    auto c = in_c;
 
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(id >= n) return;
@@ -66,15 +65,14 @@ __global__ void forward_maxpool_layer_kernel(int n, int in_h, int in_w, int in_c
     id /= c;
     int b = id;
 
-    int w_offset = -pad / 2;
-    int h_offset = -pad / 2;
+    auto w_offset = -pad / 2;
+    auto h_offset = -pad / 2;
 
     int out_index = j + w*(i + h*(k + c*b));
-    float max = -INFINITY;
-    int max_i = -1;
-    int l, m;
-    for(l = 0; l < size; ++l){
-        for(m = 0; m < size; ++m){
+    auto max = -INFINITY;
+    auto max_i = -1;
+    for(int l = 0; l < size; ++l){
+        for(int m = 0; m < size; ++m){
             int cur_h = h_offset + i*stride + l;
             int cur_w = w_offset + j*stride + m;
             int index = cur_w + in_w*(cur_h + in_h*(k + b*in_c));
@@ -91,10 +89,10 @@ __global__ void forward_maxpool_layer_kernel(int n, int in_h, int in_w, int in_c
 
 __global__ void backward_maxpool_layer_kernel(int n, int in_h, int in_w, int in_c, int stride, int size, int pad, float *delta, float *prev_delta, int *indexes)
 {
-    int h = (in_h + pad - size) / stride + 1;
-    int w = (in_w + pad - size) / stride + 1;
-    int c = in_c;
-    int area = (size-1)/stride;
+    auto h = (in_h + pad - size) / stride + 1;
+    auto w = (in_w + pad - size) / stride + 1;
+    auto c = in_c;
+    const auto area = (size-1)/stride;
 
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(id >= n) return;
@@ -108,13 +106,12 @@ __global__ void backward_maxpool_layer_kernel(int n, int in_h, int in_w, int in_
     id /= in_c;
     int b = id;
 
-    int w_offset = -pad / 2;
-    int h_offset = -pad / 2;
+    auto w_offset = -pad / 2;
+    auto h_offset = -pad / 2;
 
     float d = 0;
-    int l, m;
-    for(l = -area; l < area+1; ++l){
-        for(m = -area; m < area+1; ++m){
+    for(int l = -area; l < area+1; ++l){
+        for(int m = -area; m < area+1; ++m){
             int out_w = (j-w_offset)/stride + m;
             int out_h = (i-h_offset)/stride + l;
             int out_index = out_w + w*(out_h + h*(k + c*b));
@@ -129,9 +126,9 @@ __global__ void backward_maxpool_layer_kernel(int n, int in_h, int in_w, int in_
 extern "C" void forward_maxpool_layer_gpu(maxpool_layer layer, network_state state)
 {
     if (layer.maxpool_depth) {
-        int h = layer.out_h;
-        int w = layer.out_w;
-        int c = 1;// layer.out_c;
+        auto h = layer.out_h;
+        auto w = layer.out_w;
+        auto c = 1;// layer.out_c;
 
         size_t n = h*w*c*layer.batch;
 
@@ -166,9 +163,9 @@ extern "C" void forward_maxpool_layer_gpu(maxpool_layer layer, network_state sta
     }
 #endif
 
-    int h = layer.out_h;
-    int w = layer.out_w;
-    int c = layer.out_c;
+    auto h = layer.out_h;
+    auto w = layer.out_w;
+    auto c = layer.out_c;
 
     size_t n = h*w*c*layer.batch;
 
@@ -179,9 +176,9 @@ extern "C" void forward_maxpool_layer_gpu(maxpool_layer layer, network_state sta
 extern "C" void backward_maxpool_layer_gpu(maxpool_layer layer, network_state state)
 {
     if (layer.maxpool_depth) {
-        int h = layer.out_h;
-        int w = layer.out_w;
-        int c = layer.out_c;
+        auto h = layer.out_h;
+        auto w = layer.out_w;
+        auto c = layer.out_c;
 
         size_t n = h * w * c * layer.batch;
 

@@ -106,12 +106,11 @@ void free_section(section *s)
 
 void parse_data(char *data, float *a, int n)
 {
-    int i;
     if(!data) return;
     char *curr = data;
     char *next = data;
     int done = 0;
-    for(i = 0; i < n && !done; ++i){
+    for(int i = 0; i < n && !done; ++i){
         while(*++next !='\0' && *next != ',');
         if(*next == '\0') done = 1;
         *next = '\0';
@@ -313,7 +312,7 @@ int *parse_yolo_mask(char *a, int *num)
 {
     int *mask = 0;
     if (a) {
-        int len = strlen(a);
+        const int len = strlen(a);
         int n = 1;
         int i;
         for (i = 0; i < len; ++i) {
@@ -321,7 +320,7 @@ int *parse_yolo_mask(char *a, int *num)
         }
         mask = (int*)calloc(n, sizeof(int));
         for (i = 0; i < n; ++i) {
-            int val = atoi(a);
+            const int val = atoi(a);
             mask[i] = val;
             a = strchr(a, ',') + 1;
         }
@@ -586,7 +585,7 @@ layer parse_normalization(list *options, size_params params)
 
 layer parse_batchnorm(list *options, size_params params)
 {
-    layer l = make_batchnorm_layer(params.batch, params.w, params.h, params.c);
+    const layer l = make_batchnorm_layer(params.batch, params.w, params.h, params.c);
     return l;
 }
 
@@ -733,7 +732,7 @@ void parse_net_options(list *options, network *net)
     net->batches_cycle_mult = option_find_int_quiet(options, "sgdr_mult", 2);
     net->momentum = option_find_float(options, "momentum", .9);
     net->decay = option_find_float(options, "decay", .0001);
-    int subdivs = option_find_int(options, "subdivisions",1);
+    const int subdivs = option_find_int(options, "subdivisions",1);
     net->time_steps = option_find_int_quiet(options, "time_steps",1);
     net->track = option_find_int_quiet(options, "track", 0);
     net->augment_speed = option_find_int_quiet(options, "augment_speed", 2);
@@ -776,7 +775,7 @@ void parse_net_options(list *options, network *net)
     net->burn_in = option_find_int_quiet(options, "burn_in", 0);
 #ifdef CUDNN_HALF
     if (net->gpu_index >= 0) {
-        int compute_capability = get_gpu_compute_capability(net->gpu_index);
+        const int compute_capability = get_gpu_compute_capability(net->gpu_index);
         if (get_gpu_compute_capability(net->gpu_index) >= 700) net->cudnn_half = 1;
         else net->cudnn_half = 0;
         fprintf(stderr, " compute_capability = %d, cudnn_half = %d \n", compute_capability, net->cudnn_half);
@@ -793,7 +792,7 @@ void parse_net_options(list *options, network *net)
         if(net->policy == STEPS && (!l || !p)) error("STEPS policy must have steps and scales in cfg file");
 
         if (l) {
-            int len = strlen(l);
+            const int len = strlen(l);
             int n = 1;
             int i;
             for (i = 0; i < len; ++i) {
@@ -813,7 +812,7 @@ void parse_net_options(list *options, network *net)
                     sequence_scale = atof(s);
                     s = strchr(s, ',') + 1;
                 }
-                int step = atoi(l);
+                const int step = atoi(l);
                 l = strchr(l, ',') + 1;
                 steps[i] = step;
                 scales[i] = scale;
@@ -1083,23 +1082,22 @@ void save_convolutional_weights_binary(layer l, FILE *fp)
         pull_convolutional_layer(l);
     }
 #endif
-    int size = (l.c/l.groups)*l.size*l.size;
+    const int size = (l.c/l.groups)*l.size*l.size;
     binarize_weights(l.weights, l.n, size, l.binary_weights);
-    int i, j, k;
     fwrite(l.biases, sizeof(float), l.n, fp);
     if (l.batch_normalize){
         fwrite(l.scales, sizeof(float), l.n, fp);
         fwrite(l.rolling_mean, sizeof(float), l.n, fp);
         fwrite(l.rolling_variance, sizeof(float), l.n, fp);
     }
-    for(i = 0; i < l.n; ++i){
+    for(int i = 0; i < l.n; ++i){
         float mean = l.binary_weights[i*size];
         if(mean < 0) mean = -mean;
         fwrite(&mean, sizeof(float), 1, fp);
-        for(j = 0; j < size/8; ++j){
-            int index = i*size + j*8;
+        for(int j = 0; j < size/8; ++j){
+            const int index = i*size + j*8;
             unsigned char c = 0;
-            for(k = 0; k < 8; ++k){
+            for(int k = 0; k < 8; ++k){
                 if (j*8 + k >= size) break;
                 if (l.binary_weights[index + k] > 0) c = (c | 1<<k);
             }
@@ -1119,7 +1117,7 @@ void save_convolutional_weights(layer l, FILE *fp)
         pull_convolutional_layer(l);
     }
 #endif
-    int num = l.nweights;
+    const int num = l.nweights;
     fwrite(l.biases, sizeof(float), l.n, fp);
     if (l.batch_normalize){
         fwrite(l.scales, sizeof(float), l.n, fp);
@@ -1249,9 +1247,8 @@ void save_weights(network net, char *filename)
 void transpose_matrix(float *a, int rows, int cols)
 {
     float* transpose = (float*)calloc(rows * cols, sizeof(float));
-    int x, y;
-    for(x = 0; x < rows; ++x){
-        for(y = 0; y < cols; ++y){
+    for(int x = 0; x < rows; ++x){
+        for(int y = 0; y < cols; ++y){
             transpose[y*rows + x] = a[x*cols + y];
         }
     }
@@ -1303,16 +1300,15 @@ void load_convolutional_weights_binary(layer l, FILE *fp)
         fread(l.rolling_mean, sizeof(float), l.n, fp);
         fread(l.rolling_variance, sizeof(float), l.n, fp);
     }
-    int size = (l.c / l.groups)*l.size*l.size;
-    int i, j, k;
-    for(i = 0; i < l.n; ++i){
+    const int size = (l.c / l.groups)*l.size*l.size;
+    for(int i = 0; i < l.n; ++i){
         float mean = 0;
         fread(&mean, sizeof(float), 1, fp);
-        for(j = 0; j < size/8; ++j){
-            int index = i*size + j*8;
+        for(int j = 0; j < size/8; ++j){
+            const int index = i*size + j*8;
             unsigned char c = 0;
             fread(&c, sizeof(char), 1, fp);
-            for(k = 0; k < 8; ++k){
+            for(int k = 0; k < 8; ++k){
                 if (j*8 + k >= size) break;
                 l.weights[index + k] = (c & 1<<k) ? mean : -mean;
             }
@@ -1331,7 +1327,7 @@ void load_convolutional_weights(layer l, FILE *fp)
         //load_convolutional_weights_binary(l, fp);
         //return;
     }
-    int num = l.nweights;
+    const int num = l.nweights;
     fread(l.biases, sizeof(float), l.n, fp);
     //fread(l.weights, sizeof(float), num, fp); // as in connected layer
     if (l.batch_normalize && (!l.dontloadscales)){
@@ -1402,11 +1398,10 @@ void load_weights_upto(network *net, char *filename, int cutoff)
         fread(&iseen, sizeof(uint32_t), 1, fp);
         *net->seen = iseen;
     }
-    int transpose = (major > 1000) || (minor > 1000);
+    const int transpose = (major > 1000) || (minor > 1000);
 
-    int i;
-    for(i = 0; i < net->n && i < cutoff; ++i){
-        layer l = net->layers[i];
+    for(int i = 0; i < net->n && i < cutoff; ++i){
+        const layer l = net->layers[i];
         if (l.dontload) continue;
         if(l.type == CONVOLUTIONAL && l.share_layer == NULL){
             load_convolutional_weights(l, fp);
@@ -1461,8 +1456,8 @@ void load_weights_upto(network *net, char *filename, int cutoff)
             load_convolutional_weights(*(l.uo), fp);
         }
         if(l.type == LOCAL){
-            int locations = l.out_w*l.out_h;
-            int size = l.size*l.size*l.c*l.n*locations;
+            const int locations = l.out_w*l.out_h;
+            const int size = l.size*l.size*l.c*l.n*locations;
             fread(l.biases, sizeof(float), l.outputs, fp);
             fread(l.weights, sizeof(float), size, fp);
 #ifdef GPU

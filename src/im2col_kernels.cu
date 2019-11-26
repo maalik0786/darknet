@@ -47,12 +47,12 @@ __global__ void im2col_gpu_kernel(const int n, const float* data_im,
         int channel_out = channel_in * ksize * ksize;
         int h_in = h_out * stride - pad;
         int w_in = w_out * stride - pad;
-        float* data_col_ptr = data_col;
+        auto data_col_ptr = data_col;
         data_col_ptr += (channel_out * height_col + h_out) * width_col + w_out;
-        const float* data_im_ptr = data_im;
+        auto data_im_ptr = data_im;
         data_im_ptr += (channel_in * height + h_in) * width + w_in;
-        for (int i = 0; i < ksize; ++i) {
-            for (int j = 0; j < ksize; ++j) {
+        for (auto i = 0; i < ksize; ++i) {
+            for (auto j = 0; j < ksize; ++j) {
                 int h = h_in + i;
                 int w = w_in + j;
 
@@ -73,9 +73,9 @@ void im2col_ongpu(float *im,
          int ksize, int stride, int pad, float *data_col){
     // We are going to launch channels * height_col * width_col kernels, each
     // kernel responsible for copying a single-channel grid.
-    int height_col = (height + 2 * pad - ksize) / stride + 1;
-    int width_col = (width + 2 * pad - ksize) / stride + 1;
-    int num_kernels = channels * height_col * width_col;
+    const auto height_col = (height + 2 * pad - ksize) / stride + 1;
+    const auto width_col = (width + 2 * pad - ksize) / stride + 1;
+    auto num_kernels = channels * height_col * width_col;
     im2col_gpu_kernel<<<(num_kernels+BLOCK-1)/BLOCK,
         BLOCK, 0, get_cuda_stream()>>>(
                 num_kernels, im, height, width, ksize, pad,
@@ -164,10 +164,10 @@ __global__ void im2col_align_gpu_kernel(const int n, const float* data_im,
         //data_col_ptr += (channel_out * height_col + h_out) * width_col + w_out;
         //data_col_ptr += channel_out * bit_align + h_out * width_col + w_out;
         float* data_col_ptr = &data_col[channel_out * bit_align + h_out * width_col + w_out];
-        const float* data_im_ptr = data_im;
+        auto data_im_ptr = data_im;
         data_im_ptr += (channel_in * height + h_in) * width + w_in;
-        for (int i = 0; i < ksize; ++i) {
-            for (int j = 0; j < ksize; ++j) {
+        for (auto i = 0; i < ksize; ++i) {
+            for (auto j = 0; j < ksize; ++j) {
                 int h = h_in + i;
                 int w = w_in + j;
 
@@ -203,9 +203,9 @@ void im2col_align_ongpu(float *im,
     int ksize, int stride, int pad, float *data_col, int bit_align) {
     // We are going to launch channels * height_col * width_col kernels, each
     // kernel responsible for copying a single-channel grid.
-    int height_col = (height + 2 * pad - ksize) / stride + 1;
-    int width_col = (width + 2 * pad - ksize) / stride + 1;
-    int num_kernels = channels * height_col * width_col;
+    const auto height_col = (height + 2 * pad - ksize) / stride + 1;
+    const auto width_col = (width + 2 * pad - ksize) / stride + 1;
+    auto num_kernels = channels * height_col * width_col;
     im2col_align_gpu_kernel << <(num_kernels + BLOCK - 1) / BLOCK,
         BLOCK, 0, get_cuda_stream() >> >(
             num_kernels, im, height, width, ksize, pad,
@@ -238,7 +238,7 @@ __global__ void im2col_align_bin_gpu_kernel(const int n, const float* data_im,
     //__shared__ uint32_t bit_s[32];
     //__shared__ uint8_t bit_s[128];
 
-    int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const int index = blockIdx.x*blockDim.x + threadIdx.x;
     //for (; index < n; index += blockDim.x*gridDim.x)
     {
         int c_index = index;
@@ -258,7 +258,7 @@ __global__ void im2col_align_bin_gpu_kernel(const int n, const float* data_im,
         int j_pad = (j - pad);
         int i_pad = (i - pad);
 
-        for(int wh_index = 0; wh_index < (height_col*width_col); wh_index += 32)
+        for(auto wh_index = 0; wh_index < (height_col*width_col); wh_index += 32)
         //for (int h_out = 0; h_out < height_col; ++h_out)
         {
 
@@ -266,8 +266,8 @@ __global__ void im2col_align_bin_gpu_kernel(const int n, const float* data_im,
             //if(0)
             //for (int w_out = 0; w_out < (width_col); w_out += 32)
             {
-                const int w_out = wh_index % width_col;
-                const int h_out = wh_index / width_col;
+                const auto w_out = wh_index % width_col;
+                const auto h_out = wh_index / width_col;
 
                 const int w = w_out + j_pad;
                 const int h = h_out + i_pad;
@@ -275,11 +275,11 @@ __global__ void im2col_align_bin_gpu_kernel(const int n, const float* data_im,
                 int pre_in_index = channel_in * height * width;
                 int pre_in_wh_index = h * width + w;
 
-                int send_wh_index = wh_index;
+                auto send_wh_index = wh_index;
                 if (i >= ksize) send_wh_index = height_col*width_col;
 
                 #pragma unroll
-                for (int t = 0; t < WARP_SIZE; ++t)
+                for (auto t = 0; t < WARP_SIZE; ++t)
                 {
                     const int lane_id = threadIdx.x % WARP_SIZE;
 
@@ -327,12 +327,12 @@ void im2col_align_bin_ongpu(float *im,
     int ksize, int stride, int pad, float *data_col, int bit_align) {
     // We are going to launch channels * height_col * width_col kernels, each
     // kernel responsible for copying a single-channel grid.
-    int height_col = (height + 2 * pad - ksize) / stride + 1;
-    int width_col = (width + 2 * pad - ksize) / stride + 1;
+    const auto height_col = (height + 2 * pad - ksize) / stride + 1;
+    const auto width_col = (width + 2 * pad - ksize) / stride + 1;
     //int num_kernels = channels * height_col * width_col * ksize * ksize;
     //int num_kernels = channels * ksize * ksize * height_col;
-    int num_kernels = channels * ksize * ksize;
-    int num_blocks = num_kernels / BLOCK + 1;
+    const auto num_kernels = channels * ksize * ksize;
+    auto num_blocks = num_kernels / BLOCK + 1;
 
     //im2col_align_bin_gpu_kernel << <(num_kernels + BLOCK - 1) / BLOCK,
     im2col_align_bin_gpu_kernel << <num_blocks,
@@ -406,10 +406,9 @@ __global__ void float_to_bit_gpu_kernel(float *src, unsigned char *dst, size_t s
 
     int index = 32*blockIdx.x*blockDim.x + threadIdx.x;
     float src_val;
-    uint32_t *dst32_ptr = ((unsigned int*)dst);
+    auto dst32_ptr = ((unsigned int*)dst);
 
-    int i;
-    for(i = 0; i < 32; ++i)
+    for(int i = 0; i < 32; ++i)
     {
         if ((index + i * 1024) < size) src_val = src[index + i*1024];
         else src_val = 0;
@@ -418,7 +417,7 @@ __global__ void float_to_bit_gpu_kernel(float *src, unsigned char *dst, size_t s
         const int warp_id = threadIdx.x / WARP_SIZE;
         const int lane_id = threadIdx.x % WARP_SIZE;
 
-        uint32_t bit_mask = __ballot_custom(src_val > 0);
+        auto bit_mask = __ballot_custom(src_val > 0);
         if (lane_id == 0) tmp[i * 32 + warp_id] = bit_mask;
     }
     __syncthreads();
@@ -430,7 +429,7 @@ void float_to_bit_gpu(float *src, unsigned char *dst, size_t size)
 {
     //const int num_blocks = size / 1024 + 1;
     //const int num_blocks = size / (32*1024) + 1;
-    const int num_blocks = get_number_of_blocks(size, 32 * 1024);
+    const auto num_blocks = get_number_of_blocks(size, 32 * 1024);
     float_to_bit_gpu_kernel<<<num_blocks, 1024, 0, get_cuda_stream()>>>(src, dst, size);
     CHECK_CUDA(cudaPeekAtLastError());
 }
@@ -452,9 +451,9 @@ __device__ __host__ static inline void set_bit(unsigned char *const dst, size_t 
 */
 
 __device__ __host__ static inline unsigned char get_bit(unsigned char const*const src, size_t index) {
-    size_t src_i = index / 8;
-    int src_shift = index % 8;
-    unsigned char val = (src[src_i] & (1 << src_shift)) > 0;
+    const auto src_i = index / 8;
+    const int src_shift = index % 8;
+    const unsigned char val = (src[src_i] & (1 << src_shift)) > 0;
     //unsigned char val = (src[src_i] & (1 << (8 - src_shift))) > 0;
     return val;
 }
@@ -475,19 +474,17 @@ __device__ __host__ unsigned char reverse_byte_2(unsigned char a)
 
 __device__ unsigned char reverse_byte_CUDA(unsigned char a)
 {
-    uint32_t tmp = __brev(a);
+    const uint32_t tmp = __brev(a);
     return tmp >> 24;
 }
 
 __device__ void transpose8rS32_reversed_diagonale(unsigned char* A, unsigned char* B, int m, int n)
 {
-    unsigned x, y, t;
-
     // Load the array and pack it into x and y.
-    x = (A[0] << 24) | (A[m] << 16) | (A[2 * m] << 8) | A[3 * m];
-    y = (A[4 * m] << 24) | (A[5 * m] << 16) | (A[6 * m] << 8) | A[7 * m];
+    unsigned x = (A[0] << 24) | (A[m] << 16) | (A[2 * m] << 8) | A[3 * m];
+    unsigned y = (A[4 * m] << 24) | (A[5 * m] << 16) | (A[6 * m] << 8) | A[7 * m];
 
-    t = (x ^ (x >> 7)) & 0x00AA00AA;  x = x ^ t ^ (t << 7);
+    unsigned t = (x ^ (x >> 7)) & 0x00AA00AA;  x = x ^ t ^ (t << 7);
     t = (y ^ (y >> 7)) & 0x00AA00AA;  y = y ^ t ^ (t << 7);
 
     t = (x ^ (x >> 14)) & 0x0000CCCC;  x = x ^ t ^ (t << 14);
@@ -510,19 +507,17 @@ __device__ void transpose8rS32_reversed_diagonale(unsigned char* A, unsigned cha
 __global__ void transpose_bin_gpu_kernel(unsigned char *A, unsigned char *B, const int n, const int m,
     const int lda, const int ldb, const int block_size)
 {
-    int i;
     int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     //for (i = 0; i < n; i += 8)
     {
-        i = (index*8) % n;
-        int j;
+        int i = (index * 8) % n;
         //for (j = 0; j < m - 8; j += 8)
         {
-            j = ((index * 8) / n) * 8;
+            int j = ((index * 8) / n) * 8;
             if (j < m) {
-                int a_index = i*lda + j;
-                int b_index = j*ldb + i;
+                const auto a_index = i*lda + j;
+                const auto b_index = j*ldb + i;
                 transpose8rS32_reversed_diagonale(&A[a_index / 8], &B[b_index / 8], lda / 8, ldb / 8);
             }
             //else if (j < m) {
@@ -555,8 +550,8 @@ __device__ uint32_t reverse_32_bit(uint32_t a)
 #define swap(a0, a1, j, m) t = (a0 ^ (a1 >>j)) & m; a0 = a0 ^ t; a1 = a1 ^ (t << j);
 
 __device__ void transpose32_optimized(uint32_t A[32]) {
-    int j, k;
-    unsigned m, t;
+    int k;
+    unsigned t;
 
     //m = 0x0000FFFF;
     //for (j = 16; j != 0; j = j >> 1, m = m ^ (m << j)) {
@@ -567,8 +562,8 @@ __device__ void transpose32_optimized(uint32_t A[32]) {
     //    }
     //}
 
-    j = 16;
-    m = 0x0000FFFF;
+    int j = 16;
+    unsigned m = 0x0000FFFF;
     for (k = 0; k < 32; k = (k + j + 1) & ~j) { swap(A[k], A[k + j], j, m); }
 
     j = 8;
@@ -589,7 +584,7 @@ __device__ void transpose32_optimized(uint32_t A[32]) {
 
     // reverse Y
     for (j = 0; j < 16; ++j) {
-        uint32_t tmp = A[j];
+        const auto tmp = A[j];
         A[j] = reverse_32_bit(A[31 - j]);
         A[31 - j] = reverse_32_bit(tmp);
     }
@@ -622,19 +617,17 @@ __device__ void transpose_32x32_bits_reversed_diagonale(uint32_t *A, uint32_t *B
 __global__ void transpose_bin_gpu_kernel_32(uint32_t *A, uint32_t *B, const int n, const int m,
     const int lda, const int ldb, const int block_size)
 {
-    int i;
     int index = (blockIdx.x*blockDim.x + threadIdx.x) * 32;
 
     //for (i = 0; i < n; i += 8)
     {
-        i = index % n;
-        int j;
+        int i = index % n;
         //for (j = 0; j < m - 8; j += 8)
         {
-            j = (index / n) * 32;
+            int j = (index / n) * 32;
             if (j < m) {
-                int a_index = i*lda + j;
-                int b_index = j*ldb + i;
+                const auto a_index = i*lda + j;
+                const auto b_index = j*ldb + i;
                 transpose_32x32_bits_reversed_diagonale(&A[a_index / 32], &B[b_index / 32], lda / 32, ldb / 32);
             }
         }
@@ -645,9 +638,9 @@ void transpose_bin_gpu(unsigned char *A, unsigned char *B, const int n, const in
     const int lda, const int ldb, const int block_size)
 {
     //int size = n*m/ (8*8) + 1;
-    int size32 = n*m / (32*32) + 1;
+    const auto size32 = n*m / (32*32) + 1;
     //const int num_blocks = size / BLOCK + 1;
-    const int num_blocks32 = size32 / BLOCK_TRANSPOSE32 + 1;
+    const auto num_blocks32 = size32 / BLOCK_TRANSPOSE32 + 1;
     transpose_bin_gpu_kernel_32 << <num_blocks32, BLOCK_TRANSPOSE32, 0, get_cuda_stream() >> >((uint32_t *)A, (uint32_t *)B, n, m, lda, ldb, block_size);
     //transpose_bin_gpu_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(A, B, n, m, lda, ldb, block_size);
     CHECK_CUDA(cudaPeekAtLastError());
@@ -674,8 +667,8 @@ __global__ void transpose_uint32_kernel(uint32_t *src, uint32_t *dst, int src_h,
 
 void transpose_uint32_gpu(uint32_t *src, uint32_t *dst, int src_h, int src_w, int src_align, int dst_align)
 {
-    int size = src_w * src_h;
-    const int num_blocks = size / BLOCK + 1;
+    const auto size = src_w * src_h;
+    const auto num_blocks = size / BLOCK + 1;
     transpose_uint32_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(src, dst, src_h, src_w, src_align, dst_align);
     CHECK_CUDA(cudaPeekAtLastError());
 }
@@ -686,16 +679,16 @@ void transpose_uint32_gpu(uint32_t *src, uint32_t *dst, int src_h, int src_w, in
 __global__ void transpose_uint32_kernel_2(uint32_t *src, uint32_t *dst, int src_h, int src_w, int src_align, int dst_align)
 {
     __shared__ uint32_t tmp[33 * 32];   // misaligned_array[32x32]
-    const int w_align = 33;
+    const auto w_align = 33;
     //const int shared_size = w_align * 32;
 
     //l.bit_align - algined (n) by 32
     //new_ldb - aligned (k) by 256
 
-    const int src_w_align = src_w + (32 - src_w % 32);
+    const auto src_w_align = src_w + (32 - src_w % 32);
     //const int src_h_align = src_h + (32 - src_h % 32);
 
-    const int warps_in_width = src_w_align / 32;
+    const auto warps_in_width = src_w_align / 32;
     //const int warps_in_height = src_h_align / 32;
 
 
@@ -737,11 +730,11 @@ __global__ void transpose_uint32_kernel_2(uint32_t *src, uint32_t *dst, int src_
 #define TRANS_BLOCK 1024
 void transpose_uint32_gpu_2(uint32_t *src, uint32_t *dst, int src_h, int src_w, int src_align, int dst_align)
 {
-    int src_w_align = src_w + (32 - src_w % 32);
-    int src_h_align = src_h + (32 - src_h % 32);
+    const auto src_w_align = src_w + (32 - src_w % 32);
+    const auto src_h_align = src_h + (32 - src_h % 32);
 
-    int size = src_w_align * src_h_align;
-    int num_blocks = size / TRANS_BLOCK;
+    const auto size = src_w_align * src_h_align;
+    auto num_blocks = size / TRANS_BLOCK;
     transpose_uint32_kernel_2 << <num_blocks, TRANS_BLOCK, 0, get_cuda_stream() >> >(src, dst, src_h, src_w, src_align, dst_align);
     CHECK_CUDA(cudaPeekAtLastError());
 }
@@ -754,7 +747,7 @@ __global__ void repack_input_kernel(float *input, float *re_packed_input, int w,
 {
     int index = blockIdx.x*blockDim.x + threadIdx.x;
 
-    const int items_per_channel = w * h;
+    const auto items_per_channel = w * h;
 
     int c_pack = index % 32;
     int chan_index = index / 32;
@@ -778,8 +771,8 @@ __global__ void repack_input_kernel(float *input, float *re_packed_input, int w,
 
 void repack_input_gpu(float *input, float *re_packed_input, int w, int h, int c)
 {
-    int size = w * h * c;
-    const int num_blocks = size / BLOCK + 1;
+    const auto size = w * h * c;
+    const auto num_blocks = size / BLOCK + 1;
     repack_input_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(input, re_packed_input, w, h, c);
     CHECK_CUDA(cudaPeekAtLastError());
 }
@@ -794,7 +787,7 @@ __global__ void repack_input_kernel_2(float *input, float *re_packed_input, int 
 
     int index = blockIdx.x*blockDim.x + threadIdx.x;
 
-    const int items_per_channel = w * h;
+    const auto items_per_channel = w * h;
 
     int c_pack = index % 32;
     int chan_index = index / 32;
@@ -818,8 +811,8 @@ __global__ void repack_input_kernel_2(float *input, float *re_packed_input, int 
 
 void repack_input_gpu_2(float *input, float *re_packed_input, int w, int h, int c)
 {
-    int size = w * h * c;
-    const int num_blocks = size / BLOCK + 1;
+    const auto size = w * h * c;
+    const auto num_blocks = size / BLOCK + 1;
     repack_input_kernel_2 << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(input, re_packed_input, w, h, c);
     CHECK_CUDA(cudaPeekAtLastError());
 }
@@ -836,8 +829,8 @@ __global__ void repack_input_kernel_bin(float *input, uint32_t *re_packed_input_
     const int global_warp_id = index / WARP_SIZE;
     const int lane_id = threadIdx.x % WARP_SIZE;
 
-    const int items_per_channel = w * h;
-    const int items_per_channel_aligned = items_per_channel + WARP_SIZE - (items_per_channel % WARP_SIZE);
+    const auto items_per_channel = w * h;
+    const auto items_per_channel_aligned = items_per_channel + WARP_SIZE - (items_per_channel % WARP_SIZE);
 
     int i = 32 * (global_warp_id % (items_per_channel_aligned / WARP_SIZE));
     int chan = 32 * (global_warp_id / (items_per_channel_aligned / WARP_SIZE));
@@ -846,13 +839,13 @@ __global__ void repack_input_kernel_bin(float *input, uint32_t *re_packed_input_
     {
         uint32_t result_bits = 0;
 
-        for (int c_pack = 0; c_pack < 32; ++c_pack)
+        for (auto c_pack = 0; c_pack < 32; ++c_pack)
         {
             float src = 0;
             if ((i + lane_id) < items_per_channel) {
                 src = input[(chan + c_pack)*items_per_channel + (i + lane_id)];
             }
-            uint32_t bit_mask = __ballot_custom(src > 0);
+            auto bit_mask = __ballot_custom(src > 0);
 
             uint32_t cur_bit = (bit_mask >> lane_id) & uint32_t(1);
 
@@ -866,9 +859,9 @@ __global__ void repack_input_kernel_bin(float *input, uint32_t *re_packed_input_
 
 void repack_input_gpu_bin(float *input, uint32_t *re_packed_input_bin, int w, int h, int c)
 {
-    int size = (w * h * c) / 32 + 1;
-    const int block_size = BLOCK;
-    const int num_blocks = get_number_of_blocks(size, block_size);
+    const auto size = (w * h * c) / 32 + 1;
+    const auto block_size = BLOCK;
+    const auto num_blocks = get_number_of_blocks(size, block_size);
     //printf("\n num_blocks = %d, num_blocks/32 = %d,  block_size = %d \n", num_blocks, num_blocks / 32, block_size);
     repack_input_kernel_bin << <num_blocks, block_size, 0, get_cuda_stream() >> >(input, re_packed_input_bin, w, h, c);
     CHECK_CUDA(cudaPeekAtLastError());
@@ -1211,7 +1204,7 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
 
 __inline__ __device__
 int warpAllReduceSum(int val) {
-    for (int mask = WARP_SIZE / 2; mask > 0; mask /= 2)
+    for (auto mask = WARP_SIZE / 2; mask > 0; mask /= 2)
 #if CUDART_VERSION >= 9000
         val += __shfl_xor_sync(FULL_MASK, val, mask);
 #else
@@ -1248,7 +1241,7 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
     const int warp_id = threadIdx.x / 32;
     const int global_warp_id = index / 32;
 
-    const int N_aligned = N + WMMA_Nx2 - (N % WMMA_Nx2);
+    const auto N_aligned = N + WMMA_Nx2 - (N % WMMA_Nx2);
 
     /*
     __syncthreads();
@@ -1269,16 +1262,15 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
     */
 
 
-    int i, j, k;//, h;
     // 47% = 29 + 10 + 8
-    j = global_warp_id % (N_aligned / WMMA_Nx2);
+    int j = global_warp_id % (N_aligned / WMMA_Nx2);
     j = j * WMMA_Nx2;
     {    // out_h*out_w - one channel output size [169 - 173056]
-        i = global_warp_id / (N_aligned / WMMA_Nx2);
+        int i = global_warp_id / (N_aligned / WMMA_Nx2);
         i = i * WMMA_M;
 
         //int count = 0;
-        k = 0;
+        int k = 0;
 
         if (i < M)  //if (i < M)  // l.n - filters [16 - 55 - 1024]
         {
@@ -1326,7 +1318,7 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
             //int j_d = lane_id / 4;
 
             int32_t accum_c_val[8*2]; // wmma::fill_fragment(c_frag, 0);
-            for (int local_j = 0; local_j < 8*2; ++local_j) {
+            for (auto local_j = 0; local_j < 8*2; ++local_j) {
                 accum_c_val[local_j] = 0;
             }
 
@@ -1345,24 +1337,24 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
                 int j_d = lane_id / 4;
                 uint32_t a_val = *(uint32_t *)(A + ((i + i_d)*lda + (k + k_d*32)) / 8); // wmma::load_matrix_sync(a_frag, (uint32_t *)(A + A_cur_index), lda);
 
-                for (int c_x = 0; c_x < 2; c_x++)
+                for (auto c_x = 0; c_x < 2; c_x++)
                 {
                     uint32_t b_val = *(uint32_t *)(B + ((c_x * 8 + j + j_d)*ldb + (k + k_d * 32)) / 8); // wmma::load_matrix_sync(b_frag, (uint32_t *)(B + B_cur_index), ldb);
 
                     // wmma::bmma_sync(c_frag, a_frag, b_frag, c_frag);
                     int32_t c_val[8];  // 8 x 32 threads = 256
                     #pragma UNROLL
-                    for (int local_j = 0; local_j < 8; ++local_j)
+                    for (auto local_j = 0; local_j < 8; ++local_j)
                     {
                         uint32_t b_val_cur = __shfl_custom(b_val, local_j * 4 + k_d);
                         c_val[local_j] = __popc(xor_int32(a_val, b_val_cur));
                     }
 
                     #pragma UNROLL
-                    for (int local_j = 0; local_j < 8; ++local_j)
+                    for (auto local_j = 0; local_j < 8; ++local_j)
                     {
                         #pragma UNROLL
-                        for (int local_k = 0; local_k < 4; ++local_k) {
+                        for (auto local_k = 0; local_k < 4; ++local_k) {
                             accum_c_val[local_j + c_x*8] += __shfl_custom(c_val[local_j], i_d * 4 + local_k);
                         }
                     }
@@ -1372,9 +1364,9 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
             // only the first 8 threads (i) contain 8 good values each, in c_val[8] (j) = 8 x 8 =64
             // wmma::store_matrix_sync(&C_s[warp_id*WMMA_M*WMMA_N], c_frag, WMMA_N, wmma::mem_row_major);
             if (k_d == 0) {
-                for (int c_x = 0; c_x < 2; c_x++)
+                for (auto c_x = 0; c_x < 2; c_x++)
                 {
-                    for (int local_j = 0; local_j < 8; ++local_j)
+                    for (auto local_j = 0; local_j < 8; ++local_j)
                     {
                         C_s[warp_id*WMMA_M*WMMA_N + i_d*WMMA_N + local_j + WMMA_M*WMMA_N*32 * c_x] = accum_c_val[local_j + c_x*8];
                     }
@@ -1382,7 +1374,7 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
             }
 #endif // __CUDA_ARCH__ >= 730
 
-            for(int c_x = 0; c_x < 2; c_x++)
+            for(auto c_x = 0; c_x < 2; c_x++)
             {
                 int j_d = lane_id % WMMA_N;
                 {
@@ -1391,8 +1383,8 @@ __global__ void gemm_nn_custom_bin_mean_transposed_tensor_kernel(int M, int N, i
                     {
                         int count = C_s[warp_id*WMMA_M*WMMA_N + i_d*WMMA_N + j_d + WMMA_M*WMMA_N*32*c_x];
 
-                        const int bit_step = 128;
-                        int f1 = (K % bit_step == 0) ? 0 : (bit_step - (K % bit_step));
+                        const auto bit_step = 128;
+                        auto f1 = (K % bit_step == 0) ? 0 : (bit_step - (K % bit_step));
                         count = count - f1;    // remove extra bits (from empty space for align only)
 
                         count = (2 * count - K);
@@ -1593,15 +1585,15 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
     }
     __syncthreads();
 
-    int i, j, k; //, h;
     // 47% = 29 + 10 + 8
-    j = index % N;
-    {    // out_h*out_w - one channel output size [169 - 173056]
-        i = index / N;
+    int j = index % N;
+    {
+        // out_h*out_w - one channel output size [169 - 173056]
+        int i = index / N;
         //if (i < M)  // l.n - filters [16 - 55 - 1024]
         {
-            int count = 0;
-            k = 0;
+            auto count = 0;
+            int k = 0;
 
 #ifdef NOT_USED
             // 32 thread X 256 bit = 8192 bit
@@ -1643,11 +1635,11 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
 
                 //int64_t A_cur_index = (i*lda + k) / 8;
                 int64_t A_cur_index = (local_i*lda + k) / 8;
-                int64_t B_cur_index = (j*ldb + k) / 8;
+                const int64_t B_cur_index = (j*ldb + k) / 8;
                 if (i >= M) A_cur_index = 0;
 
                 #pragma unroll
-                for (int t = 0; t < WARP_SIZE; ++t) {
+                for (auto t = 0; t < WARP_SIZE; ++t) {
                     const int lane_id = threadIdx.x % WARP_SIZE;
 
                     const int64_t A_i = __shfl_custom(A_cur_index, t) + 8 * lane_id;
@@ -1658,9 +1650,9 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
                         uint64_t a_bit64 = *((uint64_t *)(A_s + A_i));    // weights
                         uint64_t b_bit64 = *((uint64_t *)(B + B_i));    // input
                         c_bit64 = xor_int64(a_bit64, b_bit64);
-                        int tmp_count = __popcll(c_bit64);
+                        const int tmp_count = __popcll(c_bit64);
 
-                        int sum_count = warpAllReduceSum(tmp_count);
+                        const auto sum_count = warpAllReduceSum(tmp_count);
                         if (lane_id == t) count += sum_count;
                     }
                 }
@@ -1673,11 +1665,11 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
 
                 //int64_t A_cur_index = (i*lda + k) / 8;
                 int64_t A_cur_index = (local_i*lda + k) / 8;
-                int64_t B_cur_index = (j*ldb + k) / 8;
+                const int64_t B_cur_index = (j*ldb + k) / 8;
                 if (i >= M) A_cur_index = 0;
 
                 #pragma unroll
-                for (int t = 0; t < WARP_SIZE; ++t) {
+                for (auto t = 0; t < WARP_SIZE; ++t) {
                     const int lane_id = threadIdx.x % WARP_SIZE;
 
                     const int64_t A_i = __shfl_custom(A_cur_index, t) + 4 * lane_id;
@@ -1699,15 +1691,15 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
 
             if (i < M)
             {
-                float mean_val = mean_arr[i];
-                float bias_val = bias_arr[i];
+                const auto mean_val = mean_arr[i];
+                const auto bias_val = bias_arr[i];
 
 //#ifdef NOT_USED
                 // 8%
                 for (; k < K; k += 256) {   // l.size*l.size*l.c - one filter size [27 - 144 - 9216]
                     //ulonglong4 a_bit256 = *((ulonglong4 *)(A + (i*lda + k) / 8));    // weights
                     ulonglong4 a_bit256 = *((ulonglong4 *)(A_s + (local_i*lda + k) / 8));    // weights
-                    ulonglong4 b_bit256 = *((ulonglong4 *)(B + (j*ldb + k) / 8));    // input
+                    auto b_bit256 = *((ulonglong4 *)(B + (j*ldb + k) / 8));    // input
                     ulonglong4 c_bit256 = xor_int256(a_bit256, b_bit256);
 
                     count += __popcll(c_bit256.w) + __popcll(c_bit256.x) +
@@ -1726,13 +1718,13 @@ __global__ void gemm_nn_custom_bin_mean_transposed_gpu_kernel(int M, int N, int 
                 }
 #endif
 
-                const int bit_step = 256;
-                int f1 = (K % bit_step == 0) ? 0 : (bit_step - (K % bit_step));
+                const auto bit_step = 256;
+                const auto f1 = (K % bit_step == 0) ? 0 : (bit_step - (K % bit_step));
                 count = count - f1;    // remove extra bits (from empty space for align only)
-                float dst_val = (2 * count - K) *mean_val + bias_val;
+                auto dst_val = (2 * count - K) *mean_val + bias_val;
                 if(leaky_activation)
                     dst_val = (dst_val >= 0) ? (dst_val) : (0.1f*dst_val);    // Leaky activation
-                size_t out_index = i*ldc + j;
+                const size_t out_index = i*ldc + j;
                 C[out_index] = dst_val;
 
                 if (shortcut_out_gpu) {
@@ -1766,8 +1758,8 @@ void gemm_nn_custom_bin_mean_transposed_gpu(int M, int N, int K,
     float *C, int ldc, float *mean_arr, float *bias, int leaky_activation,
     float *shortcut_in_gpu, float *shortcut_out_gpu)
 {
-    int size = M*N;
-    const int num_blocks = get_number_of_blocks(size, BLOCK);
+    const auto size = M*N;
+    const auto num_blocks = get_number_of_blocks(size, BLOCK);
 
     //printf("\n M = %d, N = %d, M %% 8 = %d, N %% 8 = %d \n", M, N, M % 8, N % 8);
 
@@ -1784,10 +1776,10 @@ void gemm_nn_custom_bin_mean_transposed_gpu(int M, int N, int K,
 #if CUDART_VERSION >= 10000
     if (1)
     {
-        const int M_aligned = M + (8 - (M % 8));
-        const int N_aligned = N + (16 - (N % 16));
-        int size = (M_aligned / 8)*(N_aligned / 16)*WARP_SIZE;
-        const int num_blocks = get_number_of_blocks(size, BLOCK);
+        const auto M_aligned = M + (8 - (M % 8));
+        const auto N_aligned = N + (16 - (N % 16));
+        const auto size = (M_aligned / 8)*(N_aligned / 16)*WARP_SIZE;
+        const auto num_blocks = get_number_of_blocks(size, BLOCK);
 
         //printf(" lda = %d, ldb = %d, ldc = %d, lda/32 = %d, ldb/32 = %d, ldc/32 = %d \n", lda, ldb, ldc, lda / 32, ldb / 32, ldc / 32);
         //printf("  l.c (K/9) = %d, M (l.n) = %d \n", (K%9 == 0)? K / 9: K, M);
@@ -1935,43 +1927,38 @@ __global__ void convolve_gpu_kernel(float *input, float *weights, float *output,
 {
     int index = blockIdx.x*blockDim.x + threadIdx.x;
 
-    int fil;
-    // filter index
-    //for (fil = 0; fil < n; ++fil)
-    int chan, y, x, f_y, f_x;
     // channel index
     //for (chan = 0; chan < in_c; ++chan)
     // input - y
     //for (y = 0; y < in_h; ++y)
     // input - x
     //for (x = 0; x < in_w; ++x)
-    x = index % in_w;
+    int x = index % in_w;
     int index2 = index / in_w;
-    y = index2 % in_h;
-    fil = index2 / in_h;
+    int y = index2 % in_h;
+    int fil = index2 / in_h;
     if (fil < n)
     {
-
-        int const output_index = fil*in_w*in_h + y*in_w + x;
+        auto const output_index = fil*in_w*in_h + y*in_w + x;
         float sum = 0;
 
-        for (chan = 0; chan < in_c; ++chan)
+        for (int chan = 0; chan < in_c; ++chan)
         {
-            int const weights_pre_index = fil*in_c*size*size + chan*size*size;
-            int const input_pre_index = chan*in_w*in_h;
+            auto const weights_pre_index = fil*in_c*size*size + chan*size*size;
+            auto const input_pre_index = chan*in_w*in_h;
 
             // filter - y
-            for (f_y = 0; f_y < size; ++f_y)
+            for (int f_y = 0; f_y < size; ++f_y)
             {
-                int input_y = y + f_y - pad;
+                const auto input_y = y + f_y - pad;
                 // filter - x
-                for (f_x = 0; f_x < size; ++f_x)
+                for (int f_x = 0; f_x < size; ++f_x)
                 {
-                    int input_x = x + f_x - pad;
+                    const auto input_x = x + f_x - pad;
                     if (input_y < 0 || input_x < 0 || input_y >= in_h || input_x >= in_w) continue;
 
-                    int input_index = input_pre_index + input_y*in_w + input_x;
-                    int weights_index = weights_pre_index + f_y*size + f_x;
+                    const auto input_index = input_pre_index + input_y*in_w + input_x;
+                    const auto weights_index = weights_pre_index + f_y*size + f_x;
 
                     sum += input[input_index] * weights[weights_index];
 
@@ -1989,8 +1976,8 @@ __global__ void convolve_gpu_kernel(float *input, float *weights, float *output,
 
 void convolve_gpu(float *input, float *weights, float *output, int in_w, int in_h, int in_c, int n, int size, int pad)
 {
-    int array_size = in_w*in_h*n;    // width X height X filters
-    const int num_blocks = array_size / BLOCK + 1;
+    const auto array_size = in_w*in_h*n;    // width X height X filters
+    const auto num_blocks = array_size / BLOCK + 1;
     //printf("\n array_size = %d, num_blocks = %d, w = %d, h = %d, n = %d, c = %d, pad = %d \n", array_size, num_blocks, in_w, in_h, n, in_c, pad);
 
     convolve_gpu_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> > (input, weights, output, in_w, in_h, in_c, n, size, pad);
@@ -2074,26 +2061,22 @@ __global__ void convolve_bin_gpu_kernel(float *input, float *weights, float *out
 {
     int index = blockIdx.x*blockDim.x + threadIdx.x;
 
-    int fil;
-    // filter index
-    //for (fil = 0; fil < n; ++fil)
-    int chan, y, x, f_y, f_x;
     // channel index
     //for (chan = 0; chan < in_c; ++chan)
     // input - y
     //for (y = 0; y < in_h; ++y)
     // input - x
     //for (x = 0; x < in_w; ++x)
-    x = index % in_w;
+    int x = index % in_w;
     int index2 = index / in_w;
-    y = index2 % in_h;
-    fil = index2 / in_h;
+    int y = index2 % in_h;
+    int fil = index2 / in_h;
     //if (fil < n)    // (1-6 for one BLOCK)
     {
         //float mean_val = mean_arr_gpu[fil];
-        int const output_index = fil*in_w*in_h + y*in_w + x;
-        int sum = 0;
-        int good_val = 0;
+        auto const output_index = fil*in_w*in_h + y*in_w + x;
+        auto sum = 0;
+        auto good_val = 0;
 
         int min_index = blockIdx.x*blockDim.x;
         int min_fil = (min_index / in_w) / in_h;
@@ -2102,7 +2085,7 @@ __global__ void convolve_bin_gpu_kernel(float *input, float *weights, float *out
 
         __shared__ uint32_t weights_shared[3*3*1024*6/32 + 1];  // 7 KB (6 filters) - use (new_lda) for size calculation
         //const int weights_size = size*size*in_c/8;
-        const int weights_size = size*size*in_c / 32 + 1;
+        const auto weights_size = size*size*in_c / 32 + 1;
 
         for (int tmp_fil = min_fil; tmp_fil <= max_fil; tmp_fil++) {
             for (int s = threadIdx.x; s < weights_size; s += blockDim.x) {
@@ -2112,15 +2095,15 @@ __global__ void convolve_bin_gpu_kernel(float *input, float *weights, float *out
         }
         __syncthreads();
 
-        for (chan = 0; chan < in_c; ++chan)
+        for (int chan = 0; chan < in_c; ++chan)
         {
             //int const weights_pre_index = fil*in_c*size*size + chan*size*size;
             //int const weights_pre_index = fil*new_lda + chan*size*size;
-            int const input_pre_index = chan*in_w*in_h;
+            auto const input_pre_index = chan*in_w*in_h;
 
             __shared__ uint32_t input_shared[416*416/32 + 1];   // 21.2 KB bytes (for input size 832x832)
-            const int input_shared_size = in_w*in_h / 32 + 1;
-            const int add_input_index = input_pre_index % 32;
+            const auto input_shared_size = in_w*in_h / 32 + 1;
+            const auto add_input_index = input_pre_index % 32;
             __syncthreads();    // why??? but is required
 
             for (int s = threadIdx.x; s < input_shared_size; s += blockDim.x) {
@@ -2145,13 +2128,13 @@ __global__ void convolve_bin_gpu_kernel(float *input, float *weights, float *out
             if (fil < n)    // (1-6 for one BLOCK)
             {
                 // filter - y
-                for (f_y = 0; f_y < size; ++f_y)
+                for (int f_y = 0; f_y < size; ++f_y)
                 {
-                    int input_y = y + f_y - pad;
+                    const auto input_y = y + f_y - pad;
                     // filter - x
-                    for (f_x = 0; f_x < size; ++f_x)
+                    for (int f_x = 0; f_x < size; ++f_x)
                     {
-                        int input_x = x + f_x - pad;
+                        const auto input_x = x + f_x - pad;
                         if (input_y < 0 || input_x < 0 || input_y >= in_h || input_x >= in_w) continue;
 
                         //int input_index = input_pre_index + input_y*in_w + input_x;
@@ -2168,8 +2151,8 @@ __global__ void convolve_bin_gpu_kernel(float *input, float *weights, float *out
                         uint8_t w_bit = get_bit((uint8_t *)weights_shared, weights_shared_index);
 
                         //int input_index = input_pre_index + input_y*in_w + input_x;
-                        int input_shared_index = /*input_pre_index +*/ input_y*in_w + input_x + add_input_index;
-                        uint8_t in_bit = get_bit((uint8_t *)input_shared, input_shared_index);
+                        const auto input_shared_index = /*input_pre_index +*/ input_y*in_w + input_x + add_input_index;
+                        auto in_bit = get_bit((uint8_t *)input_shared, input_shared_index);
                         /*
                         int new_src_index = input_shared_index / 32;
                         int src_shift = input_shared_index % 32;
@@ -2205,8 +2188,8 @@ __global__ void convolve_bin_gpu_kernel(float *input, float *weights, float *out
 void convolve_bin_gpu(float *input, float *weights, float *output, int in_w, int in_h, int in_c, int n,
     int size, int pad, int new_lda, float *mean_arr_gpu)
 {
-    int array_size = in_w*in_h*n;    // width X height X filters
-    const int num_blocks = array_size / BLOCK + 1;
+    const auto array_size = in_w*in_h*n;    // width X height X filters
+    const auto num_blocks = array_size / BLOCK + 1;
     //printf("\n array_size = %d, num_blocks = %d, w = %d, h = %d, n = %d, c = %d, pad = %d \n", array_size, num_blocks, in_w, in_h, n, in_c, pad);
 
     convolve_bin_gpu_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> > (input, weights, output, in_w, in_h, in_c, n, size, pad, new_lda, mean_arr_gpu);
@@ -2245,12 +2228,12 @@ __global__ void im2col_gpu_kernel_ext(const int n, const float* data_im,
         const int c_col = c_im * kernel_h * kernel_w;
         const int h_offset = h_col * stride_h - pad_h;
         const int w_offset = w_col * stride_w - pad_w;
-        float* data_col_ptr = data_col;
+        auto data_col_ptr = data_col;
         data_col_ptr += (c_col * height_col + h_col) * width_col + w_col;
-        const float* data_im_ptr = data_im;
+        auto data_im_ptr = data_im;
         data_im_ptr += (c_im * height + h_offset) * width + w_offset;
-        for (int i = 0; i < kernel_h; ++i) {
-            for (int j = 0; j < kernel_w; ++j) {
+        for (auto i = 0; i < kernel_h; ++i) {
+            for (auto j = 0; j < kernel_w; ++j) {
                 int h_im = h_offset + i * dilation_h;
                 int w_im = w_offset + j * dilation_w;
                 *data_col_ptr =
@@ -2272,11 +2255,11 @@ void im2col_gpu_ext(const float* data_im, const int channels,
 {
     // We are going to launch channels * height_col * width_col kernels, each
     // kernel responsible for copying a single-channel grid.
-    int height_col = (height + 2 * pad_h -
+    const auto height_col = (height + 2 * pad_h -
         (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
-    int width_col = (width + 2 * pad_w -
+    const auto width_col = (width + 2 * pad_w -
         (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
-    int num_kernels = channels * height_col * width_col;
+    auto num_kernels = channels * height_col * width_col;
     // NOLINT_NEXT_LINE(whitespace/operators)
     im2col_gpu_kernel_ext << <CAFFE_GET_BLOCKS(num_kernels),
         CAFFE_CUDA_NUM_THREADS >> >(

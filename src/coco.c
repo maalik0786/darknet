@@ -105,8 +105,7 @@ void train_coco(char *cfgfile, char *weightfile)
 
 void print_cocos(FILE *fp, int image_id, box *boxes, float **probs, int num_boxes, int classes, int w, int h)
 {
-    int i, j;
-    for(i = 0; i < num_boxes; ++i){
+    for(int i = 0; i < num_boxes; ++i){
         float xmin = boxes[i].x - boxes[i].w/2.;
         float xmax = boxes[i].x + boxes[i].w/2.;
         float ymin = boxes[i].y - boxes[i].h/2.;
@@ -117,12 +116,12 @@ void print_cocos(FILE *fp, int image_id, box *boxes, float **probs, int num_boxe
         if (xmax > w) xmax = w;
         if (ymax > h) ymax = h;
 
-        float bx = xmin;
-        float by = ymin;
-        float bw = xmax - xmin;
-        float bh = ymax - ymin;
+        const float bx = xmin;
+        const float by = ymin;
+        const float bw = xmax - xmin;
+        const float bh = ymax - ymin;
 
-        for(j = 0; j < classes; ++j){
+        for(int j = 0; j < classes; ++j){
             if (probs[i][j]) fprintf(fp, "{\"image_id\":%d, \"category_id\":%d, \"bbox\":[%f, %f, %f, %f], \"score\":%f},\n", image_id, coco_ids[j], bx, by, bw, bh, probs[i][j]);
         }
     }
@@ -364,16 +363,16 @@ void test_coco(char *cfgfile, char *weightfile, char *filename, float thresh)
 
 void run_coco(int argc, char **argv)
 {
-	int dont_show = find_arg(argc, argv, "-dont_show");
-	int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
-    int json_port = find_int_arg(argc, argv, "-json_port", -1);
+    const int dont_show = find_arg(argc, argv, "-dont_show");
+    const int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
+    const int json_port = find_int_arg(argc, argv, "-json_port", -1);
 	char *out_filename = find_char_arg(argc, argv, "-out_filename", 0);
     char *prefix = find_char_arg(argc, argv, "-prefix", 0);
-    float thresh = find_float_arg(argc, argv, "-thresh", .2);
-	float hier_thresh = find_float_arg(argc, argv, "-hier", .5);
-    int cam_index = find_int_arg(argc, argv, "-c", 0);
-    int frame_skip = find_int_arg(argc, argv, "-s", 0);
-	int ext_output = find_arg(argc, argv, "-ext_output");
+    const float thresh = find_float_arg(argc, argv, "-thresh", .2);
+    const float hier_thresh = find_float_arg(argc, argv, "-hier", .5);
+    const int cam_index = find_int_arg(argc, argv, "-c", 0);
+    const int frame_skip = find_int_arg(argc, argv, "-s", 0);
+    const int ext_output = find_arg(argc, argv, "-ext_output");
 
     if(argc < 4){
         fprintf(stderr, "usage: %s %s [train/test/valid] [cfg] [weights (optional)]\n", argv[0], argv[1]);

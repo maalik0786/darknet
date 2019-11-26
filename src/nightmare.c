@@ -8,9 +8,8 @@
 
 float abs_mean(float *x, int n)
 {
-    int i;
     float sum = 0;
-    for (i = 0; i < n; ++i){
+    for (int i = 0; i < n; ++i){
         sum += fabs(x[i]);
     }
     return sum/n;
@@ -18,10 +17,9 @@ float abs_mean(float *x, int n)
 
 void calculate_loss(float *output, float *delta, int n, float thresh)
 {
-    int i;
-    float mean = mean_array(output, n);
-    float var = variance_array(output, n);
-    for(i = 0; i < n; ++i){
+    const float mean = mean_array(output, n);
+    const float var = variance_array(output, n);
+    for(int i = 0; i < n; ++i){
         if(delta[i] > mean + thresh*sqrt(var)) delta[i] = output[i];
         else delta[i] = 0;
     }
@@ -112,17 +110,15 @@ void optimize_picture(network *net, image orig, int max_layer, float scale, floa
 
 void smooth(image recon, image update, float lambda, int num)
 {
-    int i, j, k;
-    int ii, jj;
-    for(k = 0; k < recon.c; ++k){
-        for(j = 0; j < recon.h; ++j){
-            for(i = 0; i < recon.w; ++i){
-                int out_index = i + recon.w*(j + recon.h*k);
-                for(jj = j-num; jj <= j + num && jj < recon.h; ++jj){
+    for(int k = 0; k < recon.c; ++k){
+        for(int j = 0; j < recon.h; ++j){
+            for(int i = 0; i < recon.w; ++i){
+                const int out_index = i + recon.w*(j + recon.h*k);
+                for(int jj = j - num; jj <= j + num && jj < recon.h; ++jj){
                     if (jj < 0) continue;
-                    for(ii = i-num; ii <= i + num && ii < recon.w; ++ii){
+                    for(int ii = i - num; ii <= i + num && ii < recon.w; ++ii){
                         if (ii < 0) continue;
-                        int in_index = ii + recon.w*(jj + recon.h*k);
+                        const int in_index = ii + recon.w*(jj + recon.h*k);
                         update.data[out_index] += lambda * (recon.data[in_index] - recon.data[out_index]);
                     }
                 }

@@ -139,7 +139,7 @@ void run_tag(int argc, char **argv)
         return;
     }
 
-    int clear = find_arg(argc, argv, "-clear");
+    const int clear = find_arg(argc, argv, "-clear");
     char *cfg = argv[3];
     char *weights = (argc > 4) ? argv[4] : 0;
     char *filename = (argc > 5) ? argv[5] : 0;

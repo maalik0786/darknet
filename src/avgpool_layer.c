@@ -16,7 +16,7 @@ avgpool_layer make_avgpool_layer(int batch, int w, int h, int c)
     l.out_c = c;
     l.outputs = l.out_c;
     l.inputs = h*w*c;
-    int output_size = l.outputs * batch;
+    const int output_size = l.outputs * batch;
     l.output = (float*)calloc(output_size, sizeof(float));
     l.delta = (float*)calloc(output_size, sizeof(float));
     l.forward = forward_avgpool_layer;

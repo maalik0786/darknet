@@ -142,10 +142,10 @@ ious delta_yolo_box(box truth, float *x, float *biases, int n, int index, int i,
     if (pred.h == 0) { pred.h = 1.0; }
     if (iou_loss == MSE)    // old loss
     {
-        float tx = (truth.x*lw - i);
-        float ty = (truth.y*lh - j);
-        float tw = log(truth.w*w / biases[2 * n]);
-        float th = log(truth.h*h / biases[2 * n + 1]);
+        const float tx = (truth.x*lw - i);
+        const float ty = (truth.y*lh - j);
+        const float tw = log(truth.w*w / biases[2 * n]);
+        const float th = log(truth.h*h / biases[2 * n + 1]);
 
         delta[index + 0 * stride] = scale * (tx - x[index + 0 * stride]);
         delta[index + 1 * stride] = scale * (ty - x[index + 1 * stride]);
@@ -189,13 +189,13 @@ void delta_yolo_class(float *output, float *delta, int index, int class_id, int 
     // Focal loss
     if (focal_loss) {
         // Focal Loss
-        float alpha = 0.5;    // 0.25 or 0.5
+        const float alpha = 0.5;    // 0.25 or 0.5
         //float gamma = 2;    // hardcoded in many places of the grad-formula
 
-        int ti = index + stride*class_id;
-        float pt = output[ti] + 0.000000000000001F;
+        const int ti = index + stride*class_id;
+        const float pt = output[ti] + 0.000000000000001F;
         // http://fooplot.com/#W3sidHlwZSI6MCwiZXEiOiItKDEteCkqKDIqeCpsb2coeCkreC0xKSIsImNvbG9yIjoiIzAwMDAwMCJ9LHsidHlwZSI6MTAwMH1d
-        float grad = -(1 - pt) * (2 * pt*logf(pt) + pt - 1);    // http://blog.csdn.net/linmingan/article/details/77885832
+        const float grad = -(1 - pt) * (2 * pt*logf(pt) + pt - 1);    // http://blog.csdn.net/linmingan/article/details/77885832
         //float grad = (1 - pt) * (2 * pt*logf(pt) + pt - 1);    // https://github.com/unsky/focal-loss
 
         for (n = 0; n < classes; ++n) {
@@ -217,8 +217,8 @@ void delta_yolo_class(float *output, float *delta, int index, int class_id, int 
 
 static int entry_index(layer l, int batch, int location, int entry)
 {
-    int n =   location / (l.w*l.h);
-    int loc = location % (l.w*l.h);
+    const int n =   location / (l.w*l.h);
+    const int loc = location % (l.w*l.h);
     return batch*l.outputs + n*l.w*l.h*(4+l.classes+1) + entry*l.w*l.h + loc;
 }
 
@@ -413,7 +413,6 @@ void backward_yolo_layer(const layer l, network_state state)
 
 void correct_yolo_boxes(detection *dets, int n, int w, int h, int netw, int neth, int relative, int letter)
 {
-    int i;
     int new_w=0;
     int new_h=0;
     if (letter) {
@@ -430,7 +429,7 @@ void correct_yolo_boxes(detection *dets, int n, int w, int h, int netw, int neth
         new_w = netw;
         new_h = neth;
     }
-    for (i = 0; i < n; ++i){
+    for (int i = 0; i < n; ++i){
         box b = dets[i].bbox;
         b.x =  (b.x - (netw - new_w)/2./netw) / ((float)new_w/netw);
         b.y =  (b.y - (neth - new_h)/2./neth) / ((float)new_h/neth);
@@ -448,11 +447,10 @@ void correct_yolo_boxes(detection *dets, int n, int w, int h, int netw, int neth
 
 int yolo_num_detections(layer l, float thresh)
 {
-    int i, n;
     int count = 0;
-    for (i = 0; i < l.w*l.h; ++i){
-        for(n = 0; n < l.n; ++n){
-            int obj_index  = entry_index(l, 0, n*l.w*l.h + i, 4);
+    for (int i = 0; i < l.w*l.h; ++i){
+        for(int n = 0; n < l.n; ++n){
+            const int obj_index  = entry_index(l, 0, n*l.w*l.h + i, 4);
             if(l.output[obj_index] > thresh){
                 ++count;
             }
@@ -463,15 +461,15 @@ int yolo_num_detections(layer l, float thresh)
 
 void avg_flipped_yolo(layer l)
 {
-    int i,j,n,z;
+    int i;
     float *flip = l.output + l.outputs;
-    for (j = 0; j < l.h; ++j) {
+    for (int j = 0; j < l.h; ++j) {
         for (i = 0; i < l.w/2; ++i) {
-            for (n = 0; n < l.n; ++n) {
-                for(z = 0; z < l.classes + 4 + 1; ++z){
-                    int i1 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + i;
-                    int i2 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + (l.w - i - 1);
-                    float swap = flip[i1];
+            for (int n = 0; n < l.n; ++n) {
+                for(int z = 0; z < l.classes + 4 + 1; ++z){
+                    const int i1 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + i;
+                    const int i2 = z*l.w*l.h*l.n + n*l.w*l.h + j*l.w + (l.w - i - 1);
+                    const float swap = flip[i1];
                     flip[i1] = flip[i2];
                     flip[i2] = swap;
                     if(z == 0){
@@ -489,27 +487,25 @@ void avg_flipped_yolo(layer l)
 
 int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets, int letter)
 {
-    //printf("\n l.batch = %d, l.w = %d, l.h = %d, l.n = %d \n", l.batch, l.w, l.h, l.n);
-    int i,j,n;
     float *predictions = l.output;
     if (l.batch == 2) avg_flipped_yolo(l);
     int count = 0;
-    for (i = 0; i < l.w*l.h; ++i){
-        int row = i / l.w;
-        int col = i % l.w;
-        for(n = 0; n < l.n; ++n){
-            int obj_index  = entry_index(l, 0, n*l.w*l.h + i, 4);
-            float objectness = predictions[obj_index];
+    for (int i = 0; i < l.w*l.h; ++i){
+        const int row = i / l.w;
+        const int col = i % l.w;
+        for(int n = 0; n < l.n; ++n){
+            const int obj_index  = entry_index(l, 0, n*l.w*l.h + i, 4);
+            const float objectness = predictions[obj_index];
             //if(objectness <= thresh) continue;    // incorrect behavior for Nan values
             if (objectness > thresh) {
                 //printf("\n objectness = %f, thresh = %f, i = %d, n = %d \n", objectness, thresh, i, n);
-                int box_index = entry_index(l, 0, n*l.w*l.h + i, 0);
+                const int box_index = entry_index(l, 0, n*l.w*l.h + i, 0);
                 dets[count].bbox = get_yolo_box(predictions, l.biases, l.mask[n], box_index, col, row, l.w, l.h, netw, neth, l.w*l.h);
                 dets[count].objectness = objectness;
                 dets[count].classes = l.classes;
-                for (j = 0; j < l.classes; ++j) {
-                    int class_index = entry_index(l, 0, n*l.w*l.h + i, 4 + 1 + j);
-                    float prob = objectness*predictions[class_index];
+                for (int j = 0; j < l.classes; ++j) {
+                    const int class_index = entry_index(l, 0, n*l.w*l.h + i, 4 + 1 + j);
+                    const float prob = objectness*predictions[class_index];
                     dets[count].prob[j] = (prob > thresh) ? prob : 0;
                 }
                 ++count;
