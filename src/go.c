@@ -18,7 +18,7 @@ typedef struct {
 char *fgetgo(FILE *fp)
 {
     if(feof(fp)) return 0;
-    size_t size = 94;
+    const size_t size = 94;
     char* line = (char*)malloc(size * sizeof(char));
     if(size != fread(line, sizeof(char), size, fp)){
         free(line);
@@ -52,14 +52,13 @@ moves load_go_moves(char *filename)
 
 void string_to_board(char *s, float *board)
 {
-    int i, j;
     //memset(board, 0, 1*19*19*sizeof(float));
     int count = 0;
-    for(i = 0; i < 91; ++i){
-        char c = s[i];
-        for(j = 0; j < 4; ++j){
-            int me = (c >> (2*j)) & 1;
-            int you = (c >> (2*j + 1)) & 1;
+    for(int i = 0; i < 91; ++i){
+        const char c = s[i];
+        for(int j = 0; j < 4; ++j){
+            const int me = (c >> (2*j)) & 1;
+            const int you = (c >> (2*j + 1)) & 1;
             if (me) board[count] = 1;
             else if (you) board[count] = -1;
             else board[count] = 0;
@@ -71,13 +70,12 @@ void string_to_board(char *s, float *board)
 
 void board_to_string(char *s, float *board)
 {
-    int i, j;
     memset(s, 0, (19*19/4+1)*sizeof(char));
     int count = 0;
-    for(i = 0; i < 91; ++i){
-        for(j = 0; j < 4; ++j){
-            int me = (board[count] == 1);
-            int you = (board[count] == -1);
+    for(int i = 0; i < 91; ++i){
+        for(int j = 0; j < 4; ++j){
+            const int me = (board[count] == 1);
+            const int you = (board[count] == -1);
             if (me) s[i] = s[i] | (1<<(2*j));
             if (you) s[i] = s[i] | (1<<(2*j + 1));
             ++count;
@@ -88,20 +86,19 @@ void board_to_string(char *s, float *board)
 
 void random_go_moves(moves m, float *boards, float *labels, int n)
 {
-    int i;
     memset(labels, 0, 19*19*n*sizeof(float));
-    for(i = 0; i < n; ++i){
+    for(int i = 0; i < n; ++i){
         char *b = m.data[rand()%m.n];
-        int row = b[0];
-        int col = b[1];
+        const int row = b[0];
+        const int col = b[1];
         labels[col + 19*(row + i*19)] = 1;
         string_to_board(b+2, boards+i*19*19);
         boards[col + 19*(row + i*19)] = 0;
 
-        int flip = rand()%2;
-        int rotate = rand()%4;
-        image in = float_to_image(19, 19, 1, boards+i*19*19);
-        image out = float_to_image(19, 19, 1, labels+i*19*19);
+        const int flip = rand()%2;
+        const int rotate = rand()%4;
+        const image in = float_to_image(19, 19, 1, boards+i*19*19);
+        const image out = float_to_image(19, 19, 1, labels+i*19*19);
         if(flip){
             flip_image(in);
             flip_image(out);
@@ -170,7 +167,7 @@ void train_go(char *cfgfile, char *weightfile)
 void propagate_liberty(float *board, int *lib, int *visited, int row, int col, int side)
 {
     if (row < 0 || row > 18 || col < 0 || col > 18) return;
-    int index = row*19 + col;
+    const int index = row*19 + col;
     if (board[index] != side) return;
     if (visited[index]) return;
     visited[index] = 1;
@@ -186,11 +183,10 @@ int *calculate_liberties(float *board)
 {
     int* lib = (int*)calloc(19 * 19, sizeof(int));
     int visited[361];
-    int i, j;
-    for(j = 0; j < 19; ++j){
-        for(i = 0; i < 19; ++i){
+    for(int j = 0; j < 19; ++j){
+        for(int i = 0; i < 19; ++i){
             memset(visited, 0, 19*19*sizeof(int));
-            int index = j*19 + i;
+            const int index = j*19 + i;
             if(board[index] == 0){
                 if ((i > 0)  && board[index - 1]) propagate_liberty(board, lib, visited, j, i-1, board[index-1]);
                 if ((i < 18) && board[index + 1]) propagate_liberty(board, lib, visited, j, i+1, board[index+1]);
@@ -206,20 +202,20 @@ void print_board(float *board, int swap, int *indexes)
 {
     //FILE *stream = stdout;
     FILE *stream = stderr;
-    int i,j,n;
+    int i;
     fprintf(stream, "\n\n");
     fprintf(stream, "   ");
     for(i = 0; i < 19; ++i){
         fprintf(stream, "%c ", 'A' + i + 1*(i > 7 && noi));
     }
     fprintf(stream, "\n");
-    for(j = 0; j < 19; ++j){
+    for(int j = 0; j < 19; ++j){
         fprintf(stream, "%2d", (inverted) ? 19-j : j+1);
         for(i = 0; i < 19; ++i){
-            int index = j*19 + i;
+            const int index = j*19 + i;
             if(indexes){
                 int found = 0;
-                for (n = 0; n < n_ind; ++n) {
+                for (int n = 0; n < n_ind; ++n) {
                     if(index == indexes[n]){
                         found = 1;
                         /*
@@ -250,8 +246,7 @@ void print_board(float *board, int swap, int *indexes)
 
 void flip_board(float *board)
 {
-    int i;
-    for(i = 0; i < 19*19; ++i){
+    for(int i = 0; i < 19*19; ++i){
         board[i] = -board[i];
     }
 }
@@ -701,12 +696,12 @@ void test_go(char *cfg, char *weights, int multi)
 float score_game(float *board)
 {
     FILE *f = fopen("game.txt", "w");
-    int i, j;
+    int i;
     int count = 3;
     fprintf(f, "komi 6.5\n");
     fprintf(f, "boardsize 19\n");
     fprintf(f, "clear_board\n");
-    for(j = 0; j < 19; ++j){
+    for(int j = 0; j < 19; ++j){
         for(i = 0; i < 19; ++i){
             if(board[j*19 + i] == 1) fprintf(f, "play black %c%d\n", 'A'+i+(i>=8), 19-j);
             if(board[j*19 + i] == -1) fprintf(f, "play white %c%d\n", 'A'+i+(i>=8), 19-j);
@@ -729,7 +724,7 @@ float score_game(float *board)
     char player = 0;
     while((l = fgetl(p))){
         fprintf(stderr, "%s  \t", l);
-        int n = sscanf(l, "= %c+%f", &player, &score);
+        const int n = sscanf(l, "= %c+%f", &player, &score);
         free(l);
         if (n == 2) break;
     }
@@ -832,7 +827,7 @@ void run_go(int argc, char **argv)
     char *weights = (argc > 4) ? argv[4] : 0;
     char *c2 = (argc > 5) ? argv[5] : 0;
     char *w2 = (argc > 6) ? argv[6] : 0;
-    int multi = find_arg(argc, argv, "-multi");
+    const int multi = find_arg(argc, argv, "-multi");
     if(0==strcmp(argv[2], "train")) train_go(cfg, weights);
     else if(0==strcmp(argv[2], "valid")) valid_go(cfg, weights, multi);
     else if(0==strcmp(argv[2], "self")) self_go(cfg, weights, c2, w2, multi);

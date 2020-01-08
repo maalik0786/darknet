@@ -52,7 +52,7 @@ size_t get_connected_workspace_size(layer l)
 
 connected_layer make_connected_layer(int batch, int steps, int inputs, int outputs, ACTIVATION activation, int batch_normalize)
 {
-    int total_batch = batch*steps;
+    const int total_batch = batch*steps;
     int i;
     connected_layer l = { (LAYER_TYPE)0 };
     l.type = CONNECTED;
@@ -88,7 +88,7 @@ connected_layer make_connected_layer(int batch, int steps, int inputs, int outpu
     l.update = update_connected_layer;
 
     //float scale = 1./sqrt(inputs);
-    float scale = sqrt(2.f/inputs);
+    const float scale = sqrt(2.f/inputs);
     for(i = 0; i < outputs*inputs; ++i){
         l.weights[i] = scale*rand_uniform(-1, 1);
     }
@@ -244,10 +244,9 @@ void backward_connected_layer(connected_layer l, network_state state)
 
 void denormalize_connected_layer(layer l)
 {
-    int i, j;
-    for(i = 0; i < l.outputs; ++i){
-        float scale = l.scales[i]/sqrt(l.rolling_variance[i] + .000001f);
-        for(j = 0; j < l.inputs; ++j){
+    for(int i = 0; i < l.outputs; ++i){
+        const float scale = l.scales[i]/sqrt(l.rolling_variance[i] + .000001f);
+        for(int j = 0; j < l.inputs; ++j){
             l.weights[i*l.inputs + j] *= scale;
         }
         l.biases[i] -= l.rolling_mean[i] * scale;

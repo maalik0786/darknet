@@ -15,8 +15,8 @@ int *read_tokenized_data(char *filename, size_t *read)
     size_t count = 0;
     FILE *fp = fopen(filename, "r");
     int* d = (int*)calloc(size, sizeof(int));
-    int n, one;
-    one = fscanf(fp, "%d", &n);
+    int n;
+    int one = fscanf(fp, "%d", &n);
     while(one == 1){
         ++count;
         if(count > size){
@@ -57,11 +57,10 @@ float_pair get_rnn_token_data(int *tokens, size_t *offsets, int characters, size
 {
     float* x = (float*)calloc(batch * steps * characters, sizeof(float));
     float* y = (float*)calloc(batch * steps * characters, sizeof(float));
-    int i,j;
-    for(i = 0; i < batch; ++i){
-        for(j = 0; j < steps; ++j){
-            int curr = tokens[(offsets[i])%len];
-            int next = tokens[(offsets[i] + 1)%len];
+    for(int i = 0; i < batch; ++i){
+        for(int j = 0; j < steps; ++j){
+            const int curr = tokens[(offsets[i])%len];
+            const int next = tokens[(offsets[i] + 1)%len];
 
             x[(j*batch + i)*characters + curr] = 1;
             y[(j*batch + i)*characters + next] = 1;
@@ -83,11 +82,10 @@ float_pair get_rnn_data(unsigned char *text, size_t *offsets, int characters, si
 {
     float* x = (float*)calloc(batch * steps * characters, sizeof(float));
     float* y = (float*)calloc(batch * steps * characters, sizeof(float));
-    int i,j;
-    for(i = 0; i < batch; ++i){
-        for(j = 0; j < steps; ++j){
-            unsigned char curr = text[(offsets[i])%len];
-            unsigned char next = text[(offsets[i] + 1)%len];
+    for(int i = 0; i < batch; ++i){
+        for(int j = 0; j < steps; ++j){
+            const unsigned char curr = text[(offsets[i])%len];
+            const unsigned char next = text[(offsets[i] + 1)%len];
 
             x[(j*batch + i)*characters + curr] = 1;
             y[(j*batch + i)*characters + next] = 1;
@@ -111,10 +109,9 @@ float_pair get_rnn_data(unsigned char *text, size_t *offsets, int characters, si
 
 void reset_rnn_state(network net, int b)
 {
-    int i;
-    for (i = 0; i < net.n; ++i) {
+    for (int i = 0; i < net.n; ++i) {
         #ifdef GPU
-        layer l = net.layers[i];
+        const layer l = net.layers[i];
         if(l.state_gpu){
             fill_ongpu(l.outputs, 0, l.state_gpu + l.outputs*b, 1);
         }
@@ -477,11 +474,11 @@ void run_char_rnn(int argc, char **argv)
     }
     char *filename = find_char_arg(argc, argv, "-file", "data/shakespeare.txt");
     char *seed = find_char_arg(argc, argv, "-seed", "\n\n");
-    int len = find_int_arg(argc, argv, "-len", 1000);
-    float temp = find_float_arg(argc, argv, "-temp", .7);
-    int rseed = find_int_arg(argc, argv, "-srand", time(0));
-    int clear = find_arg(argc, argv, "-clear");
-    int tokenized = find_arg(argc, argv, "-tokenized");
+    const int len = find_int_arg(argc, argv, "-len", 1000);
+    const float temp = find_float_arg(argc, argv, "-temp", .7);
+    const int rseed = find_int_arg(argc, argv, "-srand", time(0));
+    const int clear = find_arg(argc, argv, "-clear");
+    const int tokenized = find_arg(argc, argv, "-tokenized");
     char *tokens = find_char_arg(argc, argv, "-tokens", 0);
 
     char *cfg = argv[3];

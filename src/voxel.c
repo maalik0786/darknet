@@ -6,22 +6,22 @@
 void extract_voxel(char *lfile, char *rfile, char *prefix)
 {
 #ifdef OPENCV
-    int w = 1920;
-    int h = 1080;
+    const int w = 1920;
+    const int h = 1080;
     int shift = 0;
     int count = 0;
     cap_cv *lcap = get_capture_video_stream(lfile);
     cap_cv *rcap = get_capture_video_stream(rfile);
     while(1){
-        image l = get_image_from_stream_cpp(lcap);
-        image r = get_image_from_stream_cpp(rcap);
+        const image l = get_image_from_stream_cpp(lcap);
+        const image r = get_image_from_stream_cpp(rcap);
         if(!l.w || !r.w) break;
         if(count%100 == 0) {
             shift = best_3d_shift_r(l, r, -l.h/100, l.h/100);
             printf("%d\n", shift);
         }
-        image ls = crop_image(l, (l.w - w)/2, (l.h - h)/2, w, h);
-        image rs = crop_image(r, 105 + (r.w - w)/2, (r.h - h)/2 + shift, w, h);
+        const image ls = crop_image(l, (l.w - w)/2, (l.h - h)/2, w, h);
+        const image rs = crop_image(r, 105 + (r.w - w)/2, (r.h - h)/2 + shift, w, h);
         char buff[256];
         sprintf(buff, "%s_%05d_l", prefix, count);
         save_image(ls, buff);

@@ -54,7 +54,7 @@ static int letter_box = 0;
 
 void *fetch_in_thread(void *ptr)
 {
-    int dont_close_stream = 0;    // set 1 if your IP-camera periodically turns off and turns on video-stream
+    const int dont_close_stream = 0;    // set 1 if your IP-camera periodically turns off and turns on video-stream
     if(letter_box)
         in_s = get_image_from_stream_letterbox(cap, net.w, net.h, net.c, &in_img, dont_close_stream);
     else
@@ -141,7 +141,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
         error("Couldn't connect to webcam.\n");
     }
 
-    layer l = net.layers[net.n-1];
+    const layer l = net.layers[net.n-1];
     int j;
 
     avg = (float *) calloc(l.outputs, sizeof(float));
@@ -178,7 +178,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     int count = 0;
     if(!prefix && !dont_show){
-        int full_screen = 0;
+        const int full_screen = 0;
         create_window_cv("Demo", full_screen, 1352, 1013);
     }
 
@@ -208,8 +208,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
             if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
             if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
 
-            float nms = .45;    // 0.4F
-            int local_nboxes = nboxes;
+            const float nms = .45;    // 0.4F
+            const int local_nboxes = nboxes;
             detection *local_dets = dets;
 
             //if (nms) do_nms_obj(local_dets, local_nboxes, l.classes, nms);    // bad results
@@ -222,7 +222,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
             ++frame_id;
             if (demo_json_port > 0) {
-                int timeout = 400000;
+                const int timeout = 400000;
                 send_json(local_dets, local_nboxes, l.classes, demo_names, frame_id, demo_json_port, timeout);
             }
 
@@ -234,7 +234,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
             if(!prefix){
                 if (!dont_show) {
                     show_image_mat(show_img, "Demo");
-                    int c = wait_key_cv(1);
+                    const int c = wait_key_cv(1);
                     if (c == 10) {
                         if (frame_skip == 0) frame_skip = 60;
                         else if (frame_skip == 4) frame_skip = 0;
@@ -254,9 +254,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
             // if you run it with param -mjpeg_port 8090  then open URL in your web-browser: http://localhost:8090
             if (mjpeg_port > 0 && show_img) {
-                int port = mjpeg_port;
-                int timeout = 400000;
-                int jpeg_quality = 40;    // 1 - 100
+                const int port = mjpeg_port;
+                const int timeout = 400000;
+                const int jpeg_quality = 40;    // 1 - 100
                 send_mjpeg(show_img, port, timeout, jpeg_quality);
             }
 
@@ -285,8 +285,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
             //double after = get_wall_time();
             //float curr = 1./(after - before);
-            double after = get_time_point();    // more accurate time measurements
-            float curr = 1000000. / (after - before);
+            const double after = get_time_point();    // more accurate time measurements
+            const float curr = 1000000. / (after - before);
             fps = curr;
             before = after;
         }
@@ -308,10 +308,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     free_ptrs((void **)names, net.layers[net.n - 1].classes);
 
-    int i;
     const int nsize = 8;
     for (j = 0; j < nsize; ++j) {
-        for (i = 32; i < 127; ++i) {
+        for (int i = 32; i < 127; ++i) {
             free_image(alphabet[j][i]);
         }
         free(alphabet[j]);

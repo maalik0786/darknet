@@ -32,7 +32,7 @@ int gpu_index = 0;
 void cuda_set_device(int n)
 {
     gpu_index = n;
-    cudaError_t status = cudaSetDevice(n);
+    const cudaError_t status = cudaSetDevice(n);
     if (status != cudaSuccess)
         CHECK_CUDA(status);
 }
@@ -40,7 +40,7 @@ void cuda_set_device(int n)
 int cuda_get_device()
 {
     int n = 0;
-    cudaError_t status = cudaGetDevice(&n);
+    const cudaError_t status = cudaGetDevice(&n);
     CHECK_CUDA(status);
     return n;
 }
@@ -48,14 +48,14 @@ int cuda_get_device()
 void *cuda_get_context()
 {
     CUcontext pctx;
-    CUresult status = cuCtxGetCurrent(&pctx);
+    const CUresult status = cuCtxGetCurrent(&pctx);
     if(status != CUDA_SUCCESS) fprintf(stderr, " Error: cuCtxGetCurrent() is failed \n");
     return (void *)pctx;
 }
 
 void check_error(cudaError_t status)
 {
-    cudaError_t status2 = cudaGetLastError();
+    const cudaError_t status2 = cudaGetLastError();
     if (status != cudaSuccess)
     {
         const char *s = cudaGetErrorString(status);
@@ -95,14 +95,14 @@ void check_error_extended(cudaError_t status, const char *file, int line, const 
 }
 
 dim3 cuda_gridsize(size_t n){
-    size_t k = (n-1) / BLOCK + 1;
+    const size_t k = (n-1) / BLOCK + 1;
     size_t x = k;
     size_t y = 1;
     if(x > 65535){
         x = ceil(sqrt(k));
         y = (n-1)/(x*BLOCK) + 1;
     }
-    dim3 d = { (unsigned int)x, (unsigned int)y, 1 };
+    const dim3 d = { (unsigned int)x, (unsigned int)y, 1 };
     //printf("%ld %ld %ld %ld\n", n, x, y, x*y*BLOCK);
     return d;
 }
@@ -111,7 +111,7 @@ static cudaStream_t streamsArray[16];    // cudaStreamSynchronize( get_cuda_stre
 static int streamInit[16] = { 0 };
 
 cudaStream_t get_cuda_stream() {
-    int i = cuda_get_device();
+    const int i = cuda_get_device();
     if (!streamInit[i]) {
         cudaError_t status = cudaStreamCreate(&streamsArray[i]);
         //cudaError_t status = cudaStreamCreateWithFlags(&streamsArray[i], cudaStreamNonBlocking);
@@ -132,7 +132,7 @@ static cudaStream_t streamsArray2[16];    // cudaStreamSynchronize( get_cuda_mem
 static int streamInit2[16] = { 0 };
 
 cudaStream_t get_cuda_memcpy_stream() {
-    int i = cuda_get_device();
+    const int i = cuda_get_device();
     if (!streamInit2[i]) {
         cudaError_t status = cudaStreamCreate(&streamsArray2[i]);
         //cudaError_t status = cudaStreamCreateWithFlags(&streamsArray2[i], cudaStreamNonBlocking);
@@ -155,7 +155,7 @@ cudnnHandle_t cudnn_handle()
 {
     static int init[16] = {0};
     static cudnnHandle_t handle[16];
-    int i = cuda_get_device();
+    const int i = cuda_get_device();
     if(!init[i]) {
         cudnnCreate(&handle[i]);
         init[i] = 1;
@@ -170,7 +170,7 @@ void cudnn_check_error(cudnnStatus_t status)
 #ifdef DEBUG
     cudaDeviceSynchronize();
 #endif
-    cudnnStatus_t status2 = CUDNN_STATUS_SUCCESS;
+    const cudnnStatus_t status2 = CUDNN_STATUS_SUCCESS;
 #ifdef CUDNN_ERRQUERY_RAWCODE
     cudnnStatus_t status_tmp = cudnnQueryRuntimeError(cudnn_handle(), &status2, CUDNN_ERRQUERY_RAWCODE, NULL);
 #endif
@@ -220,7 +220,7 @@ cublasHandle_t blas_handle()
     const int i = cuda_get_device();
     if(!init[i]) {
         cublasCreate(&handle[i]);
-        cublasStatus_t status = cublasSetStream(handle[i], get_cuda_stream());
+        const cublasStatus_t status = cublasSetStream(handle[i], get_cuda_stream());
         CHECK_CUDA((cudaError_t)status);
         init[i] = 1;
     }
@@ -230,7 +230,7 @@ cublasHandle_t blas_handle()
 float *cuda_make_array(float *x, size_t n)
 {
     float *x_gpu;
-    size_t size = sizeof(float)*n;
+    const size_t size = sizeof(float)*n;
     cudaError_t status = cudaMalloc((void **)&x_gpu, size);
     if (status != cudaSuccess) fprintf(stderr, " Try to set subdivisions=64 in your cfg-file. \n");
     CHECK_CUDA(status);
@@ -247,7 +247,7 @@ void cuda_random(float *x_gpu, size_t n)
 {
     static curandGenerator_t gen[16];
     static int init[16] = {0};
-    int i = cuda_get_device();
+    const int i = cuda_get_device();
     if(!init[i]){
         curandCreateGenerator(&gen[i], CURAND_RNG_PSEUDO_DEFAULT);
         curandSetPseudoRandomGeneratorSeed(gen[i], time(0));
@@ -264,7 +264,7 @@ float cuda_compare(float *x_gpu, float *x, size_t n, char *s)
     //int i;
     //for(i = 0; i < n; ++i) printf("%f %f\n", tmp[i], x[i]);
     axpy_cpu(n, -1, x, 1, tmp, 1);
-    float err = dot_cpu(n, tmp, 1, tmp, 1);
+    const float err = dot_cpu(n, tmp, 1, tmp, 1);
     printf("Error %s: %f\n", s, sqrt(err/n));
     free(tmp);
     return err;
@@ -273,8 +273,8 @@ float cuda_compare(float *x_gpu, float *x, size_t n, char *s)
 int *cuda_make_int_array(size_t n)
 {
     int *x_gpu;
-    size_t size = sizeof(int)*n;
-    cudaError_t status = cudaMalloc((void **)&x_gpu, size);
+    const size_t size = sizeof(int)*n;
+    const cudaError_t status = cudaMalloc((void **)&x_gpu, size);
     if(status != cudaSuccess) fprintf(stderr, " Try to set subdivisions=64 in your cfg-file. \n");
     CHECK_CUDA(status);
     return x_gpu;
@@ -283,12 +283,12 @@ int *cuda_make_int_array(size_t n)
 int *cuda_make_int_array_new_api(int *x, size_t n)
 {
 	int *x_gpu;
-	size_t size = sizeof(int)*n;
-	cudaError_t status = cudaMalloc((void **)&x_gpu, size);
+    const size_t size = sizeof(int)*n;
+    const cudaError_t status = cudaMalloc((void **)&x_gpu, size);
     CHECK_CUDA(status);
 	if (x) {
 		//status = cudaMemcpy(x_gpu, x, size, cudaMemcpyHostToDevice, get_cuda_stream());
-        cudaError_t status = cudaMemcpyAsync(x_gpu, x, size, cudaMemcpyHostToDevice, get_cuda_stream());
+        const cudaError_t status = cudaMemcpyAsync(x_gpu, x, size, cudaMemcpyHostToDevice, get_cuda_stream());
         CHECK_CUDA(status);
 	}
 	if (!x_gpu) error("Cuda malloc failed\n");
@@ -298,31 +298,31 @@ int *cuda_make_int_array_new_api(int *x, size_t n)
 void cuda_free(float *x_gpu)
 {
     //cudaStreamSynchronize(get_cuda_stream());
-    cudaError_t status = cudaFree(x_gpu);
+    const cudaError_t status = cudaFree(x_gpu);
     CHECK_CUDA(status);
 }
 
 void cuda_push_array(float *x_gpu, float *x, size_t n)
 {
-    size_t size = sizeof(float)*n;
+    const size_t size = sizeof(float)*n;
     //cudaError_t status = cudaMemcpy(x_gpu, x, size, cudaMemcpyHostToDevice);
-    cudaError_t status = cudaMemcpyAsync(x_gpu, x, size, cudaMemcpyHostToDevice, get_cuda_stream());
+    const cudaError_t status = cudaMemcpyAsync(x_gpu, x, size, cudaMemcpyHostToDevice, get_cuda_stream());
     CHECK_CUDA(status);
 }
 
 void cuda_pull_array(float *x_gpu, float *x, size_t n)
 {
-    size_t size = sizeof(float)*n;
+    const size_t size = sizeof(float)*n;
     //cudaError_t status = cudaMemcpy(x, x_gpu, size, cudaMemcpyDeviceToHost);
-    cudaError_t status = cudaMemcpyAsync(x, x_gpu, size, cudaMemcpyDeviceToHost, get_cuda_stream());
+    const cudaError_t status = cudaMemcpyAsync(x, x_gpu, size, cudaMemcpyDeviceToHost, get_cuda_stream());
     CHECK_CUDA(status);
     cudaStreamSynchronize(get_cuda_stream());
 }
 
 void cuda_pull_array_async(float *x_gpu, float *x, size_t n)
 {
-    size_t size = sizeof(float)*n;
-    cudaError_t status = cudaMemcpyAsync(x, x_gpu, size, cudaMemcpyDeviceToHost, get_cuda_stream());
+    const size_t size = sizeof(float)*n;
+    const cudaError_t status = cudaMemcpyAsync(x, x_gpu, size, cudaMemcpyDeviceToHost, get_cuda_stream());
     check_error(status);
     //cudaStreamSynchronize(get_cuda_stream());
 }
@@ -336,9 +336,9 @@ int get_gpu_compute_capability(int i)
 {
     typedef struct cudaDeviceProp cudaDeviceProp;
     cudaDeviceProp prop;
-    cudaError_t status = cudaGetDeviceProperties(&prop, i);
+    const cudaError_t status = cudaGetDeviceProperties(&prop, i);
     CHECK_CUDA(status);
-    int cc = prop.major * 100 + prop.minor * 10;    // __CUDA_ARCH__ format
+    const int cc = prop.major * 100 + prop.minor * 10;    // __CUDA_ARCH__ format
     return cc;
 }
 

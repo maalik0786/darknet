@@ -57,9 +57,8 @@ void list_insert(list *l, void *val)
 
 void free_node(node *n)
 {
-    node *next;
     while(n) {
-        next = n->next;
+        node* next = n->next;
         free(n);
         n = next;
     }

@@ -38,8 +38,8 @@ layer make_normalization_layer(int batch, int w, int h, int c, int size, float a
 
 void resize_normalization_layer(layer *layer, int w, int h)
 {
-    int c = layer->c;
-    int batch = layer->batch;
+    const int c = layer->c;
+    const int batch = layer->batch;
     layer->h = h;
     layer->w = w;
     layer->out_h = h;

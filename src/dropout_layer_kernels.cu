@@ -19,7 +19,7 @@ void forward_dropout_layer_gpu(dropout_layer layer, network_state state)
     if (iteration_num < state.net.burn_in) return;
 
 
-    int size = layer.inputs*layer.batch;
+    auto size = layer.inputs*layer.batch;
     cuda_random(layer.rand_gpu, size);
     /*
     int i;
@@ -39,7 +39,7 @@ void backward_dropout_layer_gpu(dropout_layer layer, network_state state)
     const int iteration_num = (*state.net.seen) / (state.net.batch*state.net.subdivisions);
     if (iteration_num < state.net.burn_in) return;
 
-    int size = layer.inputs*layer.batch;
+    auto size = layer.inputs*layer.batch;
 
     yoloswag420blazeit360noscope<<<cuda_gridsize(size), BLOCK, 0, get_cuda_stream() >>>(state.delta, size, layer.rand_gpu, layer.probability, layer.scale);
     CHECK_CUDA(cudaPeekAtLastError());

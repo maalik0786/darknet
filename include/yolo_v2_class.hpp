@@ -99,11 +99,11 @@ public:
 
     LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history = true, int const frames_story = 30, int const max_dist = 40);
 
-//#ifdef OPENCV
-//		shape_type detect_shape(cv::Mat src);
-//		cv::Mat Detector::image_to_mat(image img);
-//		double shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0);
-//#endif
+#ifdef OPENCV
+		shape_type detect_shape(image src) const;
+    static cv::Mat image_to_mat(image src);
+		double shape_angle(cv::Point pt1, cv::Point pt2, cv::Point pt0) const;
+#endif
 
     LIB_API void *get_cuda_context() const;
 
@@ -111,10 +111,10 @@ public:
 
     std::vector<bbox_t> detect_resized(image_t img, int init_w, int init_h, float thresh = 0.2, bool use_mean = false)
     {
-        if (img.data == NULL)
+        if (img.data == nullptr)
             throw std::runtime_error("Image is empty");
         auto detection_boxes = detect(img, thresh, use_mean);
-        float wk = (float)init_w / img.w, hk = (float)init_h / img.h;
+        const auto wk = static_cast<float>(init_w) / img.w, hk = static_cast<float>(init_h) / img.h;
         for (auto &i : detection_boxes) i.x *= wk, i.w *= wk, i.y *= hk, i.h *= hk;
         return detection_boxes;
     }
@@ -122,17 +122,17 @@ public:
 #ifdef OPENCV
     std::vector<bbox_t> detect(cv::Mat mat, float thresh = 0.2, bool use_mean = false)
     {
-        if(mat.data == NULL)
+        if(mat.data == nullptr)
             throw std::runtime_error("Image is empty");
-        auto image_ptr = mat_to_image_resize(mat);
+        const auto image_ptr = mat_to_image_resize(mat);
         return detect_resized(*image_ptr, mat.cols, mat.rows, thresh, use_mean);
     }
 
     std::shared_ptr<image_t> mat_to_image_resize(cv::Mat mat) const
     {
-        if (mat.data == NULL) return std::shared_ptr<image_t>(NULL);
+        if (mat.data == nullptr) return std::shared_ptr<image_t>(nullptr);
 
-        cv::Size network_size = cv::Size(get_net_width(), get_net_height());
+        const auto network_size = cv::Size(get_net_width(), get_net_height());
         cv::Mat det_mat;
         if (mat.size() != network_size)
             cv::resize(mat, det_mat, network_size);
@@ -158,15 +158,15 @@ private:
 
     static image_t mat_to_image_custom(cv::Mat mat)
     {
-        int w = mat.cols;
-        int h = mat.rows;
-        int c = mat.channels();
-        image_t im = make_image_custom(w, h, c);
-        unsigned char *data = (unsigned char *)mat.data;
-        int step = mat.step;
-        for (int y = 0; y < h; ++y) {
-            for (int k = 0; k < c; ++k) {
-                for (int x = 0; x < w; ++x) {
+	    const auto w = mat.cols;
+	    const auto h = mat.rows;
+	    const auto c = mat.channels();
+	    const auto im = make_image_custom(w, h, c);
+	    const auto data = static_cast<unsigned char*>(mat.data);
+	    const int step = mat.step;
+        for (auto y = 0; y < h; ++y) {
+            for (auto k = 0; k < c; ++k) {
+                for (auto x = 0; x < w; ++x) {
                     im.data[k*w*h + y*w + x] = data[y*step + x*c + k] / 255.0f;
                 }
             }
@@ -176,8 +176,8 @@ private:
 
     static image_t make_empty_image(int w, int h, int c)
     {
-        image_t out;
-        out.data = 0;
+        image_t out{};
+        out.data = nullptr;
         out.h = h;
         out.w = w;
         out.c = c;
@@ -186,8 +186,8 @@ private:
 
     static image_t make_image_custom(int w, int h, int c)
     {
-        image_t out = make_empty_image(w, h, c);
-        out.data = (float *)calloc(h*w*c, sizeof(float));
+	    auto out = make_empty_image(w, h, c);
+        out.data = static_cast<float*>(calloc(h * w * c, sizeof(float)));
         return out;
     }
 
@@ -195,23 +195,21 @@ private:
 
 public:
 
-    bool send_json_http(std::vector<bbox_t> cur_bbox_vec, std::vector<std::string> obj_names, int frame_id,
-        std::string filename = std::string(), int timeout = 400000, int port = 8070)
+    static bool send_json_http(std::vector<bbox_t> cur_bbox_vec, std::vector<std::string> obj_names, int frame_id,
+                               std::string filename = std::string(), int timeout = 400000, int port = 8070)
     {
-        std::string send_str;
-
-        char *tmp_buf = (char *)calloc(1024, sizeof(char));
+	    const auto tmp_buf = static_cast<char*>(calloc(1024, sizeof(char)));
         if (!filename.empty()) {
             sprintf(tmp_buf, "{\n \"frame_id\":%d, \n \"filename\":\"%s\", \n \"objects\": [ \n", frame_id, filename.c_str());
         }
         else {
             sprintf(tmp_buf, "{\n \"frame_id\":%d, \n \"objects\": [ \n", frame_id);
         }
-        send_str = tmp_buf;
+        std::string send_str = tmp_buf;
         free(tmp_buf);
 
         for (auto & i : cur_bbox_vec) {
-            char *buf = (char *)calloc(2048, sizeof(char));
+	        const auto buf = static_cast<char*>(calloc(2048, sizeof(char)));
 
             sprintf(buf, "  {\"class_id\":%d, \"name\":\"%s\", \"absolute_coordinates\":{\"center_x\":%d, \"center_y\":%d, \"width\":%d, \"height\":%d}, \"confidence\":%f",
                 i.obj_id, obj_names[i.obj_id].c_str(), i.x, i.y, i.w, i.h, i.prob);
@@ -568,8 +566,8 @@ class Tracker_optflow {};
 
 static cv::Scalar obj_id_to_color(int obj_id) {
     int const colors[6][3] = { { 1,0,1 },{ 0,0,1 },{ 0,1,1 },{ 0,1,0 },{ 1,1,0 },{ 1,0,0 } };
-    int const offset = obj_id * 123457 % 6;
-    int const color_scale = 150 + (obj_id * 123457) % 100;
+    auto const offset = obj_id * 123457 % 6;
+    auto const color_scale = 150 + (obj_id * 123457) % 100;
     cv::Scalar color(colors[offset][0], colors[offset][1], colors[offset][2]);
     color *= color_scale;
     return color;
@@ -595,16 +593,16 @@ public:
 
     void set(cv::Mat src_mat, std::vector<bbox_t> result_vec)
     {
-        size_t const count_preview_boxes = src_mat.cols / preview_box_size;
+	    auto const count_preview_boxes = src_mat.cols / preview_box_size;
         if (preview_box_track_id.size() != count_preview_boxes) preview_box_track_id.resize(count_preview_boxes);
 
         // increment frames history
         for (auto &i : preview_box_track_id)
-            i.last_showed_frames_ago = std::min((unsigned)frames_history, i.last_showed_frames_ago + 1);
+            i.last_showed_frames_ago = std::min(static_cast<unsigned>(frames_history), i.last_showed_frames_ago + 1);
 
         // occupy empty boxes
         for (auto &k : result_vec) {
-            bool found = false;
+	        auto found = false;
             // find the same (track_id)
             for (auto &i : preview_box_track_id) {
                 if (i.track_id == k.track_id) {
@@ -629,28 +627,28 @@ public:
         }
 
         // draw preview box (from old or current frame)
-        for (size_t i = 0; i < preview_box_track_id.size(); ++i)
+        for (auto& i : preview_box_track_id)
         {
             // get object image
-            cv::Mat dst = preview_box_track_id[i].mat_resized_obj;
-            preview_box_track_id[i].current_detection = false;
+            auto dst = i.mat_resized_obj;
+            i.current_detection = false;
 
             for (auto &k : result_vec) {
-                if (preview_box_track_id[i].track_id == k.track_id) {
-                    if (one_off_detections && preview_box_track_id[i].last_showed_frames_ago > 0) {
-                        preview_box_track_id[i].last_showed_frames_ago = frames_history; break;
+                if (i.track_id == k.track_id) {
+                    if (one_off_detections && i.last_showed_frames_ago > 0) {
+	                    i.last_showed_frames_ago = frames_history; break;
                     }
-                    bbox_t b = k;
+                    const auto b = k;
                     cv::Rect r(b.x, b.y, b.w, b.h);
                     cv::Rect img_rect(cv::Point2i(0, 0), src_mat.size());
-                    cv::Rect rect_roi = r & img_rect;
+                    auto rect_roi = r & img_rect;
                     if (rect_roi.width > 1 || rect_roi.height > 1) {
-                        cv::Mat roi = src_mat(rect_roi);
+	                    auto roi = src_mat(rect_roi);
                         cv::resize(roi, dst, cv::Size(preview_box_size, preview_box_size), cv::INTER_NEAREST);
-                        preview_box_track_id[i].mat_obj = roi.clone();
-                        preview_box_track_id[i].mat_resized_obj = dst.clone();
-                        preview_box_track_id[i].current_detection = true;
-                        preview_box_track_id[i].bbox = k;
+	                    i.mat_obj = roi.clone();
+	                    i.mat_resized_obj = dst.clone();
+	                    i.current_detection = true;
+	                    i.bbox = k;
                     }
                     break;
                 }
@@ -667,23 +665,23 @@ public:
             auto &prev_box = preview_box_track_id[i];
 
             // draw object image
-            cv::Mat dst = prev_box.mat_resized_obj;
+            auto dst = prev_box.mat_resized_obj;
             if (prev_box.last_showed_frames_ago < frames_history &&
                 dst.size() == cv::Size(preview_box_size, preview_box_size))
             {
                 cv::Rect dst_rect_roi(cv::Point2i(i * preview_box_size, draw_mat.rows - bottom_offset), dst.size());
-                cv::Mat dst_roi = draw_mat(dst_rect_roi);
+                auto dst_roi = draw_mat(dst_rect_roi);
                 dst.copyTo(dst_roi);
 
-                cv::Scalar color = obj_id_to_color(prev_box.obj_id);
-                int thickness = (prev_box.current_detection) ? 5 : 1;
+                auto color = obj_id_to_color(prev_box.obj_id);
+                const auto thickness = (prev_box.current_detection) ? 5 : 1;
                 cv::rectangle(draw_mat, dst_rect_roi, color, thickness);
 
-                unsigned int const track_id = prev_box.track_id;
-                std::string track_id_str = (track_id > 0) ? std::to_string(track_id) : "";
+                auto const track_id = prev_box.track_id;
+                auto track_id_str = (track_id > 0) ? std::to_string(track_id) : "";
                 putText(draw_mat, track_id_str, dst_rect_roi.tl() - cv::Point2i(-4, 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.9, cv::Scalar(0, 0, 0), 2);
 
-                std::string size_str = std::to_string(prev_box.bbox.w) + "x" + std::to_string(prev_box.bbox.h);
+                auto size_str = std::to_string(prev_box.bbox.w) + "x" + std::to_string(prev_box.bbox.h);
                 putText(draw_mat, size_str, dst_rect_roi.tl() + cv::Point2i(0, 12), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0, 0, 0), 1);
 
                 if (!one_off_detections && prev_box.current_detection) {
@@ -695,7 +693,7 @@ public:
                 if (one_off_detections && show_small_boxes) {
                     cv::Rect src_rect_roi(cv::Point2i(prev_box.bbox.x, prev_box.bbox.y),
                         cv::Size(prev_box.bbox.w, prev_box.bbox.h));
-                    unsigned int const color_history = (255 * prev_box.last_showed_frames_ago) / frames_history;
+                    auto const color_history = (255 * prev_box.last_showed_frames_ago) / frames_history;
                     color = cv::Scalar(255 - 3 * color_history, 255 - 2 * color_history, 255 - 1 * color_history);
                     if (prev_box.mat_obj.size() == src_rect_roi.size()) {
                         prev_box.mat_obj.copyTo(draw_mat(src_rect_roi));
@@ -778,7 +776,7 @@ public:
 
             kf.correct(meas);
 
-            bbox_t new_box = predict();
+            const auto new_box = predict();
             if (new_box.w == 0 || new_box.h == 0) {
                 set(box);
                 //std::cerr << " force set(): track_id = " << box.track_id <<
@@ -789,7 +787,7 @@ public:
         // Kalman.predict() calculates: statePre = TransitionMatrix * statePost;
         // predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
         bbox_t predict() {
-            bbox_t box;
+            bbox_t box{};
             state = kf.predict();
 
             box.x = state.at<float>(0);
@@ -886,8 +884,8 @@ public:
         // clear old bboxes
         for (size_t state_id = 0; state_id < track_id_state_id_time.size(); ++state_id)
         {
-            float time_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - track_id_state_id_time[state_id].last_time).count();
-            float time_wait = 0.5;    // 0.5 second
+	        const float time_sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - track_id_state_id_time[state_id].last_time).count();
+	        const float time_wait = 0.5;    // 0.5 second
             if (track_id_state_id_time[state_id].track_id > -1)
             {
                 if ((result_vec_pred[state_id].x > img_size.width) ||
@@ -909,17 +907,17 @@ public:
         tst_t tst;
         tst.state_id = -1;
 
-        float min_dist = std::numeric_limits<float>::max();
+        auto min_dist = std::numeric_limits<float>::max();
 
         for (size_t i = 0; i < max_objects; ++i)
         {
             if (track_id_state_id_time[i].track_id > -1 && result_vec_pred[i].obj_id == find_box.obj_id && busy_vec[i] == false)
             {
-                bbox_t pred_box = result_vec_pred[i];
+	            auto pred_box = result_vec_pred[i];
 
-                float dist = get_distance(pred_box.x, pred_box.y, find_box.x, find_box.y);
+	            const auto dist = get_distance(pred_box.x, pred_box.y, find_box.x, find_box.y);
 
-                float movement_dist = std::max(max_dist, static_cast<float>(std::max(pred_box.w, pred_box.h)) );
+	            const auto movement_dist = std::max(max_dist, static_cast<float>(std::max(pred_box.w, pred_box.h)) );
 
                 if ((dist < movement_dist) && (dist < min_dist)) {
                     min_dist = dist;
@@ -968,9 +966,9 @@ public:
 
         for (size_t i = 0; i < result_vec.size(); ++i)
         {
-            tst_t tst = get_state_id(result_vec[i], busy_vec);
-            int state_id = tst.state_id;
-            int track_id = tst.track_id;
+	        auto tst = get_state_id(result_vec[i], busy_vec);
+	        auto state_id = tst.state_id;
+	        auto track_id = tst.track_id;
 
             // if new state_id
             if (state_id < 0) {
@@ -1003,9 +1001,9 @@ public:
 
         for (size_t i = 0; i < max_objects; ++i)
         {
-            tst_t tst = track_id_state_id_time[i];
+	        const auto tst = track_id_state_id_time[i];
             if (tst.track_id > -1) {
-                bbox_t box = kalman_vec[i].predict();
+	            const auto box = kalman_vec[i].predict();
 
                 result_vec_pred[i].x = box.x;
                 result_vec_pred[i].y = box.y;
@@ -1039,11 +1037,11 @@ public:
         for (size_t i = 0; i < max_objects; ++i)
             track_id_state_id_time[i].detection_count--;
 
-        std::vector<tst_t> tst_vec = find_state_ids(result_vec);
+        auto tst_vec = find_state_ids(result_vec);
 
         for (size_t i = 0; i < tst_vec.size(); ++i) {
-            tst_t tst = tst_vec[i];
-            int state_id = tst.state_id;
+	        const auto tst = tst_vec[i];
+	        const auto state_id = tst.state_id;
             if (state_id > -1)
             {
                 kalman_vec[state_id].set_delta_time(dT);

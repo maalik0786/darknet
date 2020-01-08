@@ -75,8 +75,7 @@ void forward_cost_layer(cost_layer l, network_state state)
 {
     if (!state.truth) return;
     if(l.cost_type == MASKED){
-        int i;
-        for(i = 0; i < l.batch*l.inputs; ++i){
+        for(int i = 0; i < l.batch*l.inputs; ++i){
             if(state.truth[i] == SECRET_NUM) state.input[i] = SECRET_NUM;
         }
     }
@@ -130,7 +129,7 @@ void forward_cost_layer_gpu(cost_layer l, network_state state)
     if(l.ratio){
         cuda_pull_array(l.delta_gpu, l.delta, l.batch*l.inputs);
         qsort(l.delta, l.batch*l.inputs, sizeof(float), float_abs_compare);
-        int n = (1-l.ratio) * l.batch*l.inputs;
+        const int n = (1-l.ratio) * l.batch*l.inputs;
         float thresh = l.delta[n];
         thresh = 0;
         printf("%f\n", thresh);

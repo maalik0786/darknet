@@ -11,7 +11,6 @@
 #include <cstdio>
 #include <vector>
 #include <iostream>
-#include <algorithm>
 #include <memory>
 #include <mutex>
 using std::cerr;
@@ -25,7 +24,6 @@ using std::endl;
 #pragma comment(lib, "ws2_32.lib")
 #endif
 #include "gettimeofday.h"
-#include <time.h>
 #define PORT        unsigned long
 #define ADDRPOINTER   int*
 struct _INIT_W32DATA
@@ -39,12 +37,12 @@ struct _INIT_W32DATA
 // each other they won,t be sending any more data (i.e., closing output channels),
 // the connection can be closed fully, with no risk of reset.
 static int close_socket(SOCKET s) {
-    int close_output = ::shutdown(s, 1); // 0 close input, 1 close output, 2 close both
-    char *buf = (char *)calloc(1024, sizeof(char));
+    const auto close_output = ::shutdown(s, 1); // 0 close input, 1 close output, 2 close both
+    const auto buf = static_cast<char*>(calloc(1024, sizeof(char)));
     ::recv(s, buf, 1024, 0);
     free(buf);
-    int close_input = ::shutdown(s, 0);
-    int result = ::closesocket(s);
+    const auto close_input = ::shutdown(s, 0);
+    const auto result = ::closesocket(s);
     cerr << "Close socket: out = " << close_output << ", in = " << close_input << " \n";
     return result;
 }
@@ -144,15 +142,15 @@ public:
         address.sin_addr.s_addr = INADDR_ANY;
         address.sin_family = AF_INET;
         address.sin_port = htons(port);    // ::htons(port);
-        int reuse = 1;
-        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
+        auto reuse = 1;
+        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse), sizeof(reuse)) < 0)
             cerr << "setsockopt(SO_REUSEADDR) failed" << endl;
 
 #ifdef SO_REUSEPORT
         if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (const char*)&reuse, sizeof(reuse)) < 0)
             cerr << "setsockopt(SO_REUSEPORT) failed" << endl;
 #endif
-        if (::bind(sock, (SOCKADDR*)&address, sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
+        if (::bind(sock, reinterpret_cast<SOCKADDR*>(&address), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
         {
             cerr << "error JSON_sender: couldn't bind sock " << sock << " to port " << port << "!" << endl;
             return release();
@@ -175,19 +173,19 @@ public:
 
     bool write(char const* outputbuf)
     {
-        fd_set rread = master;
+        auto rread = master;
         struct timeval select_timeout = { 0, 0 };
         struct timeval socket_timeout = { 0, timeout };
         if (::select(maxfd + 1, &rread, NULL, NULL, &select_timeout) <= 0)
             return true; // nothing broken, there's just noone listening
 
-        int outlen = static_cast<int>(strlen(outputbuf));
+        const auto outlen = static_cast<int>(strlen(outputbuf));
 
 #ifdef _WIN32
         for (unsigned i = 0; i<rread.fd_count; i++)
         {
             int addrlen = sizeof(SOCKADDR);
-            SOCKET s = rread.fd_array[i];    // fd_set on win is an array, while ...
+            const auto s = rread.fd_array[i];    // fd_set on win is an array, while ...
 #else
         for (int s = 0; s <= maxfd; s++)
         {
@@ -198,16 +196,16 @@ public:
             if (s == sock) // request on master socket, accept and send main header.
             {
                 SOCKADDR_IN address = { 0 };
-                SOCKET      client = ::accept(sock, (SOCKADDR*)&address, &addrlen);
+                auto client = ::accept(sock, reinterpret_cast<SOCKADDR*>(&address), &addrlen);
                 if (client == SOCKET_ERROR)
                 {
                     cerr << "error JSON_sender: couldn't accept connection on sock " << sock << " !" << endl;
                     return false;
                 }
-                if (setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, (char *)&socket_timeout, sizeof(socket_timeout)) < 0) {
+                if (setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&socket_timeout), sizeof(socket_timeout)) < 0) {
                     cerr << "error JSON_sender: SO_RCVTIMEO setsockopt failed\n";
                 }
-                if (setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, (char *)&socket_timeout, sizeof(socket_timeout)) < 0) {
+                if (setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&socket_timeout), sizeof(socket_timeout)) < 0) {
                     cerr << "error JSON_sender: SO_SNDTIMEO setsockopt failed\n";
                 }
                 maxfd = (maxfd>client ? maxfd : client);
@@ -225,7 +223,7 @@ public:
                     //"Content-Type: multipart/x-mixed-replace; boundary=boundary\r\n"
                     "\r\n", 0);
                 _write(client, "[\n", 0);   // open JSON array
-                int n = _write(client, outputbuf, outlen);
+                auto n = _write(client, outputbuf, outlen);
                 cerr << "JSON_sender: new client " << client << endl;
             }
             else // existing client, just stream pix
@@ -238,7 +236,7 @@ public:
                 //sprintf(head, "--boundary\r\nContent-Type: application/json\r\nContent-Length: %zu\r\n\r\n", outlen);
                 //_write(s, head, 0);
                 if (!close_all_sockets) _write(s, ", \n", 0);
-                int n = _write(s, outputbuf, outlen);
+                const auto n = _write(s, outputbuf, outlen);
                 if (n < outlen)
                 {
                     cerr << "JSON_sender: kill client " << s << endl;
@@ -247,14 +245,14 @@ public:
                 }
 
                 if (close_all_sockets) {
-                    int result = close_socket(s);
+                    const auto result = close_socket(s);
                     cerr << "JSON_sender: close clinet: " << result << " \n";
                     continue;
                 }
             }
         }
         if (close_all_sockets) {
-            int result = close_socket(sock);
+            const auto result = close_socket(sock);
             cerr << "JSON_sender: close acceptor: " << result << " \n\n";
         }
         return true;
@@ -287,7 +285,7 @@ void send_json_custom(char const* send_buf, int port, int timeout)
 void send_json(detection *dets, int nboxes, int classes, char **names, long long int frame_id, int port, int timeout)
 {
     try {
-        char *send_buf = detection_to_json(dets, nboxes, classes, names, frame_id, NULL);
+        const auto send_buf = detection_to_json(dets, nboxes, classes, names, frame_id, NULL);
 
         send_json_custom(send_buf, port, timeout);
         std::cout << " JSON-stream sent. \n";
@@ -304,8 +302,6 @@ void send_json(detection *dets, int nboxes, int classes, char **names, long long
 #ifdef OPENCV
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/highgui/highgui_c.h>
 #include <opencv2/imgproc/imgproc_c.h>
 #ifndef CV_VERSION_EPOCH
 #include <opencv2/videoio/videoio.hpp>
@@ -323,7 +319,7 @@ class MJPG_sender
     int quality; // jpeg compression [1..100]
     int close_all_sockets;
 
-    int _write(int sock, char const*const s, int len)
+    int _write(const int sock, char const*const s, int len)
     {
         if (len < 1) { len = strlen(s); }
         return ::send(sock, s, len, 0);
@@ -331,7 +327,7 @@ class MJPG_sender
 
 public:
 
-    MJPG_sender(int port = 0, int _timeout = 400000, int _quality = 30)
+    MJPG_sender(int port = 0, const int _timeout = 400000, const int _quality = 30)
         : sock(INVALID_SOCKET)
         , timeout(_timeout)
         , quality(_quality)
@@ -359,7 +355,7 @@ public:
     void close_all()
     {
         close_all_sockets = 1;
-        cv::Mat tmp(cv::Size(10, 10), CV_8UC3);
+        const cv::Mat tmp(cv::Size(10, 10), CV_8UC3);
         write(tmp);
     }
 
@@ -371,7 +367,7 @@ public:
         address.sin_addr.s_addr = INADDR_ANY;
         address.sin_family = AF_INET;
         address.sin_port = htons(port);    // ::htons(port);
-        int reuse = 1;
+        auto reuse = 1;
         if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
             cerr << "setsockopt(SO_REUSEADDR) failed" << endl;
 
@@ -402,7 +398,7 @@ public:
 
     bool write(const Mat & frame)
     {
-        fd_set rread = master;
+        auto rread = master;
         struct timeval select_timeout = { 0, 0 };
         struct timeval socket_timeout = { 0, timeout };
         if (::select(maxfd + 1, &rread, NULL, NULL, &select_timeout) <= 0)
@@ -415,13 +411,13 @@ public:
         cv::imencode(".jpg", frame, outbuf, params);  //REMOVED FOR COMPATIBILITY
         // https://docs.opencv.org/3.4/d4/da8/group__imgcodecs.html#ga292d81be8d76901bff7988d18d2b42ac
         //std::cerr << "cv::imencode call disabled!" << std::endl;
-        size_t outlen = outbuf.size();
+        const auto outlen = outbuf.size();
 
 #ifdef _WIN32
         for (unsigned i = 0; i<rread.fd_count; i++)
         {
             int addrlen = sizeof(SOCKADDR);
-            SOCKET s = rread.fd_array[i];    // fd_set on win is an array, while ...
+            const auto s = rread.fd_array[i];    // fd_set on win is an array, while ...
 #else
         for (int s = 0; s <= maxfd; s++)
         {
@@ -432,7 +428,7 @@ public:
             if (s == sock) // request on master socket, accept and send main header.
             {
                 SOCKADDR_IN address = { 0 };
-                SOCKET      client = ::accept(sock, (SOCKADDR*)&address, &addrlen);
+                auto client = ::accept(sock, (SOCKADDR*)&address, &addrlen);
                 if (client == SOCKET_ERROR)
                 {
                     cerr << "error MJPG_sender: couldn't accept connection on sock " << sock << " !" << endl;
@@ -462,7 +458,7 @@ public:
             else // existing client, just stream pix
             {
                 if (close_all_sockets) {
-                    int result = close_socket(s);
+                    const auto result = close_socket(s);
                     cerr << "MJPG_sender: close clinet: " << result << " \n";
                     continue;
                 }
@@ -470,7 +466,7 @@ public:
                 char head[400];
                 sprintf(head, "--mjpegstream\r\nContent-Type: image/jpeg\r\nContent-Length: %zu\r\n\r\n", outlen);
                 _write(s, head, 0);
-                int n = _write(s, (char*)(&outbuf[0]), outlen);
+                const auto n = _write(s, (char*)(&outbuf[0]), outlen);
                 //cerr << "known client " << s << " " << n << endl;
                 if (n < outlen)
                 {
@@ -481,7 +477,7 @@ public:
             }
         }
         if (close_all_sockets) {
-            int result = close_socket(sock);
+            const auto result = close_socket(sock);
             cerr << "MJPG_sender: close acceptor: " << result << " \n\n";
         }
         return true;
@@ -522,7 +518,7 @@ static std::chrono::steady_clock::time_point steady_start, steady_end;
 static double total_time;
 
 double get_time_point() {
-    std::chrono::steady_clock::time_point current_time = std::chrono::steady_clock::now();
+    const auto current_time = std::chrono::steady_clock::now();
     //uint64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(current_time.time_since_epoch()).count();
     return std::chrono::duration_cast<std::chrono::microseconds>(current_time.time_since_epoch()).count();
 }
@@ -536,7 +532,7 @@ void stop_timer() {
 }
 
 double get_time() {
-    double took_time = std::chrono::duration<double>(steady_end - steady_start).count();
+    const auto took_time = std::chrono::duration<double>(steady_end - steady_start).count();
     total_time += took_time;
     return took_time;
 }

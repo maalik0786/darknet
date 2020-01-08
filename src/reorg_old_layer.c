@@ -26,7 +26,7 @@ layer make_reorg_old_layer(int batch, int w, int h, int c, int stride, int rever
     fprintf(stderr, "reorg_old              /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n",  stride, w, h, c, l.out_w, l.out_h, l.out_c);
     l.outputs = l.out_h * l.out_w * l.out_c;
     l.inputs = h*w*c;
-    int output_size = l.out_h * l.out_w * l.out_c * batch;
+    const int output_size = l.out_h * l.out_w * l.out_c * batch;
     l.output = (float*)calloc(output_size, sizeof(float));
     l.delta = (float*)calloc(output_size, sizeof(float));
 
@@ -44,8 +44,8 @@ layer make_reorg_old_layer(int batch, int w, int h, int c, int stride, int rever
 
 void resize_reorg_old_layer(layer *l, int w, int h)
 {
-    int stride = l->stride;
-    int c = l->c;
+    const int stride = l->stride;
+    const int c = l->c;
 
     l->h = h;
     l->w = w;
@@ -62,7 +62,7 @@ void resize_reorg_old_layer(layer *l, int w, int h)
 
     l->outputs = l->out_h * l->out_w * l->out_c;
     l->inputs = l->outputs;
-    int output_size = l->outputs * l->batch;
+    const int output_size = l->outputs * l->batch;
 
     l->output = (float*)realloc(l->output, output_size * sizeof(float));
     l->delta = (float*)realloc(l->delta, output_size * sizeof(float));

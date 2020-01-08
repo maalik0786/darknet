@@ -11,16 +11,16 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
     float *weights, float *input, float *output, float *mean);
 
 static inline void set_bit(unsigned char *const dst, size_t index) {
-    size_t dst_i = index / 8;
-    int dst_shift = index % 8;
+    const size_t dst_i = index / 8;
+    const int dst_shift = index % 8;
     dst[dst_i] |= 1 << dst_shift;
     //dst[dst_i] |= 1 << (8 - dst_shift);
 }
 
 static inline unsigned char get_bit(unsigned char const*const src, size_t index) {
-    size_t src_i = index / 8;
-    int src_shift = index % 8;
-    unsigned char val = (src[src_i] & (1 << src_shift)) > 0;
+    const size_t src_i = index / 8;
+    const int src_shift = index % 8;
+    const unsigned char val = (src[src_i] & (1 << src_shift)) > 0;
     //unsigned char val = (src[src_i] & (1 << (8 - src_shift))) > 0;
     return val;
 }

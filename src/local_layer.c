@@ -25,7 +25,6 @@ int local_out_width(local_layer l)
 
 local_layer make_local_layer(int batch, int h, int w, int c, int n, int size, int stride, int pad, ACTIVATION activation)
 {
-    int i;
     local_layer l = { (LAYER_TYPE)0 };
     l.type = LOCAL;
 
@@ -38,9 +37,9 @@ local_layer make_local_layer(int batch, int h, int w, int c, int n, int size, in
     l.size = size;
     l.pad = pad;
 
-    int out_h = local_out_height(l);
-    int out_w = local_out_width(l);
-    int locations = out_h*out_w;
+    const int out_h = local_out_height(l);
+    const int out_w = local_out_width(l);
+    const int locations = out_h*out_w;
     l.out_h = out_h;
     l.out_w = out_w;
     l.out_c = n;
@@ -54,8 +53,8 @@ local_layer make_local_layer(int batch, int h, int w, int c, int n, int size, in
     l.bias_updates = (float*)calloc(l.outputs, sizeof(float));
 
     // float scale = 1./sqrt(size*size*c);
-    float scale = sqrt(2./(size*size*c));
-    for(i = 0; i < c*n*size*size; ++i) l.weights[i] = scale*rand_uniform(-1,1);
+    const float scale = sqrt(2./(size*size*c));
+    for(int i = 0; i < c*n*size*size; ++i) l.weights[i] = scale*rand_uniform(-1,1);
 
     l.col_image = (float*)calloc(out_h * out_w * size * size * c, sizeof(float));
     l.output = (float*)calloc(l.batch * out_h * out_w * n, sizeof(float));
@@ -166,8 +165,8 @@ void backward_local_layer(local_layer l, network_state state)
 
 void update_local_layer(local_layer l, int batch, float learning_rate, float momentum, float decay)
 {
-    int locations = l.out_w*l.out_h;
-    int size = l.size*l.size*l.c*l.n*locations;
+    const int locations = l.out_w*l.out_h;
+    const int size = l.size*l.size*l.c*l.n*locations;
     axpy_cpu(l.outputs, learning_rate/batch, l.bias_updates, 1, l.biases, 1);
     scal_cpu(l.outputs, momentum, l.bias_updates, 1);
 
@@ -255,8 +254,8 @@ void backward_local_layer_gpu(local_layer l, network_state state)
 
 void update_local_layer_gpu(local_layer l, int batch, float learning_rate, float momentum, float decay)
 {
-    int locations = l.out_w*l.out_h;
-    int size = l.size*l.size*l.c*l.n*locations;
+    const int locations = l.out_w*l.out_h;
+    const int size = l.size*l.size*l.c*l.n*locations;
     axpy_ongpu(l.outputs, learning_rate/batch, l.bias_updates_gpu, 1, l.biases_gpu, 1);
     scal_ongpu(l.outputs, momentum, l.bias_updates_gpu, 1);
 
@@ -267,16 +266,16 @@ void update_local_layer_gpu(local_layer l, int batch, float learning_rate, float
 
 void pull_local_layer(local_layer l)
 {
-    int locations = l.out_w*l.out_h;
-    int size = l.size*l.size*l.c*l.n*locations;
+    const int locations = l.out_w*l.out_h;
+    const int size = l.size*l.size*l.c*l.n*locations;
     cuda_pull_array(l.weights_gpu, l.weights, size);
     cuda_pull_array(l.biases_gpu, l.biases, l.outputs);
 }
 
 void push_local_layer(local_layer l)
 {
-    int locations = l.out_w*l.out_h;
-    int size = l.size*l.size*l.c*l.n*locations;
+    const int locations = l.out_w*l.out_h;
+    const int size = l.size*l.size*l.c*l.n*locations;
     cuda_push_array(l.weights_gpu, l.weights, size);
     cuda_push_array(l.biases_gpu, l.biases, l.outputs);
 }

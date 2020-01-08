@@ -4,9 +4,9 @@
 
 image get_crop_image(crop_layer l)
 {
-    int h = l.out_h;
-    int w = l.out_w;
-    int c = l.out_c;
+    const int h = l.out_h;
+    const int w = l.out_w;
+    const int c = l.out_c;
     return float_to_image(w,h,c,l.output);
 }
 

@@ -50,7 +50,7 @@ void forward_network_gpu(network net, network_state state)
     int i;
     for(i = 0; i < net.n; ++i){
         state.index = i;
-        layer l = net.layers[i];
+        auto l = net.layers[i];
         if(l.delta_gpu && state.train){
             fill_ongpu(l.outputs * l.batch, 0, l.delta_gpu, 1);
         }
@@ -92,17 +92,17 @@ void backward_network_gpu(network net, network_state state)
 {
     state.workspace = net.workspace;
     int i;
-    float * original_input = state.input;
-    float * original_delta = state.delta;
+    auto original_input = state.input;
+    auto original_delta = state.delta;
     for(i = net.n-1; i >= 0; --i){
         state.index = i;
-        layer l = net.layers[i];
+        auto l = net.layers[i];
         if (l.stopbackward) break;
         if(i == 0){
             state.input = original_input;
             state.delta = original_delta;
         }else{
-            layer prev = net.layers[i-1];
+            auto prev = net.layers[i-1];
             state.input = prev.output_gpu;
             state.delta = prev.delta_gpu;
         }
@@ -126,11 +126,10 @@ void backward_network_gpu(network net, network_state state)
 void update_network_gpu(network net)
 {
     cuda_set_device(net.gpu_index);
-    int i;
-    int update_batch = net.batch*net.subdivisions * get_sequence_value(net);
-    float rate = get_current_rate(net);
-    for(i = 0; i < net.n; ++i){
-        layer l = net.layers[i];
+    const auto update_batch = net.batch*net.subdivisions * get_sequence_value(net);
+    const auto rate = get_current_rate(net);
+    for(int i = 0; i < net.n; ++i){
+        auto l = net.layers[i];
         l.t = get_current_batch(net);
         if(l.update_gpu){
             l.update_gpu(l, update_batch, rate, net.momentum, net.decay);
@@ -143,8 +142,8 @@ void forward_backward_network_gpu(network net, float *x, float *y)
     network_state state;
     state.index = 0;
     state.net = net;
-    int x_size = get_network_input_size(net)*net.batch;
-    int y_size = get_network_output_size(net)*net.batch;
+    auto x_size = get_network_input_size(net)*net.batch;
+    auto y_size = get_network_output_size(net)*net.batch;
     if(net.layers[net.n-1].truths) y_size = net.layers[net.n-1].truths*net.batch;
     if(!*net.input_gpu){
         *net.input_gpu = cuda_make_array(x, x_size);
@@ -160,7 +159,7 @@ void forward_backward_network_gpu(network net, float *x, float *y)
 #if defined(CUDNN_HALF) && defined(CUDNN)
     int i;
     for (i = 0; i < net.n; ++i) {
-        layer l = net.layers[i];
+        auto l = net.layers[i];
         if (net.cudnn_half){
             if (l.type == CONVOLUTIONAL && l.weights_gpu && l.weights_gpu16) {
                 assert((l.nweights) > 0);
@@ -200,9 +199,9 @@ float train_network_datum_gpu(network net, float *x, float *y)
 {
     *net.seen += net.batch;
     forward_backward_network_gpu(net, x, y);
-    float error = get_network_cost(net);
+    const auto error = get_network_cost(net);
     //if (((*net.seen) / net.batch) % net.subdivisions == 0) update_network_gpu(net);
-    const int sequence = get_sequence_value(net);
+    const auto sequence = get_sequence_value(net);
     if (((*net.seen) / net.batch) % (net.subdivisions*sequence) == 0) update_network_gpu(net);
 
     return error;
@@ -216,7 +215,7 @@ typedef struct {
 
 void *train_thread(void *ptr)
 {
-    train_args args = *(train_args*)ptr;
+    const auto args = *(train_args*)ptr;
     free(ptr);
     cuda_set_device(args.net.gpu_index);
     *args.err = train_network(args.net, args.d);
@@ -226,7 +225,7 @@ void *train_thread(void *ptr)
 pthread_t train_network_in_thread(network net, data d, float *err)
 {
     pthread_t thread;
-    train_args *ptr = (train_args *)calloc(1, sizeof(train_args));
+    auto ptr = (train_args *)calloc(1, sizeof(train_args));
     ptr->net = net;
     ptr->d = d;
     ptr->err = err;
@@ -260,8 +259,8 @@ void push_updates(layer l)
 
 void update_layer(layer l, network net)
 {
-    int update_batch = net.batch*net.subdivisions;
-    float rate = get_current_rate(net);
+    const auto update_batch = net.batch*net.subdivisions;
+    const auto rate = get_current_rate(net);
     l.t = get_current_batch(net);
     if(l.update_gpu){
         l.update_gpu(l, update_batch, rate, net.momentum, net.decay);
@@ -364,20 +363,20 @@ void sync_layer(network *nets, int n, int j)
 {
     //printf("Syncing layer %d\n", j);
     int i;
-    network net = nets[0];
-    layer base = net.layers[j];
+    const auto net = nets[0];
+    const auto base = net.layers[j];
     cuda_set_device(net.gpu_index);
     pull_weights(base);
     for (i = 1; i < n; ++i) {
         cuda_set_device(nets[i].gpu_index);
-        layer l = nets[i].layers[j];
+        const auto l = nets[i].layers[j];
         pull_weights(l);
         merge_weights(l, base);
     }
     scale_weights(base, 1./n);
     for (i = 0; i < n; ++i) {
         cuda_set_device(nets[i].gpu_index);
-        layer l = nets[i].layers[j];
+        const auto l = nets[i].layers[j];
         distribute_weights(l, base);
     }
     //printf("Done syncing layer %d\n", j);
@@ -391,7 +390,7 @@ typedef struct{
 
 void *sync_layer_thread(void *ptr)
 {
-    sync_args args = *(sync_args*)ptr;
+    const auto args = *(sync_args*)ptr;
     sync_layer(args.nets, args.n, args.j);
     free(ptr);
     return 0;
@@ -400,7 +399,7 @@ void *sync_layer_thread(void *ptr)
 pthread_t sync_layer_in_thread(network *nets, int n, int j)
 {
     pthread_t thread;
-    sync_args *ptr = (sync_args *)calloc(1, sizeof(sync_args));
+    const auto ptr = (sync_args *)calloc(1, sizeof(sync_args));
     ptr->nets = nets;
     ptr->n = n;
     ptr->j = j;
@@ -411,8 +410,8 @@ pthread_t sync_layer_in_thread(network *nets, int n, int j)
 void sync_nets(network *nets, int n, int interval)
 {
     int j;
-    int layers = nets[0].n;
-    pthread_t *threads = (pthread_t *) calloc(layers, sizeof(pthread_t));
+    const auto layers = nets[0].n;
+    const auto threads = (pthread_t *) calloc(layers, sizeof(pthread_t));
 
     *nets[0].seen += interval * (n-1) * nets[0].batch * nets[0].subdivisions;
     for (j = 0; j < n; ++j){
@@ -435,12 +434,12 @@ float train_networks(network *nets, int n, data d, int interval)
     int subdivisions = nets[0].subdivisions;
     assert(batch * subdivisions * n == d.X.rows);
 #endif
-    pthread_t *threads = (pthread_t *) calloc(n, sizeof(pthread_t));
-    float *errors = (float *) calloc(n, sizeof(float));
+    const auto threads = (pthread_t *) calloc(n, sizeof(pthread_t));
+    const auto errors = (float *) calloc(n, sizeof(float));
 
     float sum = 0;
     for(i = 0; i < n; ++i){
-        data p = get_data_part(d, i, n);
+        const auto p = get_data_part(d, i, n);
         threads[i] = train_network_in_thread(nets[i], p, errors + i);
     }
     for(i = 0; i < n; ++i){
@@ -463,7 +462,7 @@ float train_networks(network *nets, int n, data d, int interval)
 
 float *get_network_output_layer_gpu(network net, int i)
 {
-    layer l = net.layers[i];
+    const auto l = net.layers[i];
     if(l.type != REGION) cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
     return l.output;
 }

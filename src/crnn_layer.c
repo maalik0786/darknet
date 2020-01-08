@@ -12,7 +12,7 @@
 
 static void increment_layer(layer *l, int steps)
 {
-    int num = l->outputs*l->batch*steps;
+    const int num = l->outputs*l->batch*steps;
     l->output += num;
     l->delta += num;
     l->x += num;
@@ -106,7 +106,7 @@ void resize_crnn_layer(layer *l, int w, int h)
     l->output = l->output_layer->output;
     l->delta = l->output_layer->delta;
 
-    int hidden_filters = l->self_layer->c;
+    const int hidden_filters = l->self_layer->c;
     l->w = w;
     l->h = h;
     l->inputs = h * w * l->c;
@@ -134,8 +134,7 @@ void resize_crnn_layer(layer *l, int w, int h)
 
 void free_state_crnn(layer l)
 {
-    int i;
-    for (i = 0; i < l.outputs * l.batch; ++i) l.self_layer->output[i] = rand_uniform(-1, 1);
+    for (int i = 0; i < l.outputs * l.batch; ++i) l.self_layer->output[i] = rand_uniform(-1, 1);
 
 #ifdef GPU
     cuda_push_array(l.self_layer->output_gpu, l.self_layer->output, l.outputs * l.batch);

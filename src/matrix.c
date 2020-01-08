@@ -8,21 +8,19 @@
 
 void free_matrix(matrix m)
 {
-    int i;
-    for(i = 0; i < m.rows; ++i) free(m.vals[i]);
+    for(int i = 0; i < m.rows; ++i) free(m.vals[i]);
     free(m.vals);
 }
 
 float matrix_topk_accuracy(matrix truth, matrix guess, int k)
 {
     int* indexes = (int*)calloc(k, sizeof(int));
-    int n = truth.cols;
-    int i,j;
+    const int n = truth.cols;
     int correct = 0;
-    for(i = 0; i < truth.rows; ++i){
+    for(int i = 0; i < truth.rows; ++i){
         top_k(guess.vals[i], n, k, indexes);
-        for(j = 0; j < k; ++j){
-            int class_id = indexes[j];
+        for(int j = 0; j < k; ++j){
+            const int class_id = indexes[j];
             if(truth.vals[i][class_id]){
                 ++correct;
                 break;
@@ -35,9 +33,8 @@ float matrix_topk_accuracy(matrix truth, matrix guess, int k)
 
 void scale_matrix(matrix m, float scale)
 {
-    int i,j;
-    for(i = 0; i < m.rows; ++i){
-        for(j = 0; j < m.cols; ++j){
+    for(int i = 0; i < m.rows; ++i){
+        for(int j = 0; j < m.cols; ++j){
             m.vals[i][j] *= scale;
         }
     }
@@ -65,9 +62,8 @@ matrix resize_matrix(matrix m, int size)
 void matrix_add_matrix(matrix from, matrix to)
 {
     assert(from.rows == to.rows && from.cols == to.cols);
-    int i,j;
-    for(i = 0; i < from.rows; ++i){
-        for(j = 0; j < from.cols; ++j){
+    for(int i = 0; i < from.rows; ++i){
+        for(int j = 0; j < from.cols; ++j){
             to.vals[i][j] += from.vals[i][j];
         }
     }
@@ -75,12 +71,11 @@ void matrix_add_matrix(matrix from, matrix to)
 
 matrix make_matrix(int rows, int cols)
 {
-    int i;
     matrix m;
     m.rows = rows;
     m.cols = cols;
     m.vals = (float**)calloc(m.rows, sizeof(float*));
-    for(i = 0; i < m.rows; ++i){
+    for(int i = 0; i < m.rows; ++i){
         m.vals[i] = (float*)calloc(m.cols, sizeof(float));
     }
     return m;
@@ -88,13 +83,12 @@ matrix make_matrix(int rows, int cols)
 
 matrix hold_out_matrix(matrix *m, int n)
 {
-    int i;
     matrix h;
     h.rows = n;
     h.cols = m->cols;
     h.vals = (float**)calloc(h.rows, sizeof(float*));
-    for(i = 0; i < n; ++i){
-        int index = rand()%m->rows;
+    for(int i = 0; i < n; ++i){
+        const int index = rand()%m->rows;
         h.vals[i] = m->vals[index];
         m->vals[index] = m->vals[--(m->rows)];
     }
@@ -104,10 +98,9 @@ matrix hold_out_matrix(matrix *m, int n)
 float *pop_column(matrix *m, int c)
 {
     float* col = (float*)calloc(m->rows, sizeof(float));
-    int i, j;
-    for(i = 0; i < m->rows; ++i){
+    for(int i = 0; i < m->rows; ++i){
         col[i] = m->vals[i][c];
-        for(j = c; j < m->cols-1; ++j){
+        for(int j = c; j < m->cols-1; ++j){
             m->vals[i][j] = m->vals[i][j+1];
         }
     }
@@ -145,10 +138,8 @@ matrix csv_to_matrix(char *filename)
 
 void matrix_to_csv(matrix m)
 {
-    int i, j;
-
-    for(i = 0; i < m.rows; ++i){
-        for(j = 0; j < m.cols; ++j){
+    for(int i = 0; i < m.rows; ++i){
+        for(int j = 0; j < m.cols; ++j){
             if(j > 0) printf(",");
             printf("%.17g", m.vals[i][j]);
         }
@@ -158,7 +149,7 @@ void matrix_to_csv(matrix m)
 
 void print_matrix(matrix m)
 {
-    int i, j;
+    int j;
     printf("%d X %d Matrix:\n",m.rows, m.cols);
     printf(" __");
     for(j = 0; j < 16*m.cols-1; ++j) printf(" ");
@@ -168,7 +159,7 @@ void print_matrix(matrix m)
     for(j = 0; j < 16*m.cols-1; ++j) printf(" ");
     printf("  |\n");
 
-    for(i = 0; i < m.rows; ++i){
+    for(int i = 0; i < m.rows; ++i){
         printf("|  ");
         for(j = 0; j < m.cols; ++j){
             printf("%15.7f ", m.vals[i][j]);
@@ -189,11 +180,10 @@ int *sample(int n);
 
 int closest_center(float *datum, matrix centers)
 {
-    int j;
     int best = 0;
     float best_dist = dist(datum, centers.vals[best], centers.cols);
-    for (j = 0; j < centers.rows; ++j) {
-        float new_dist = dist(datum, centers.vals[j], centers.cols);
+    for (int j = 0; j < centers.rows; ++j) {
+        const float new_dist = dist(datum, centers.vals[j], centers.cols);
         if (new_dist < best_dist) {
             best_dist = new_dist;
             best = j;
@@ -204,16 +194,15 @@ int closest_center(float *datum, matrix centers)
 
 float dist_to_closest_center(float *datum, matrix centers)
 {
-    int ci = closest_center(datum, centers);
+    const int ci = closest_center(datum, centers);
     return dist(datum, centers.vals[ci], centers.cols);
 }
 
 int kmeans_expectation(matrix data, int *assignments, matrix centers)
 {
-    int i;
     int converged = 1;
-    for (i = 0; i < data.rows; ++i) {
-        int closest = closest_center(data.vals[i], centers);
+    for (int i = 0; i < data.rows; ++i) {
+        const int closest = closest_center(data.vals[i], centers);
         if (closest != assignments[i]) converged = 0;
         assignments[i] = closest;
     }
@@ -222,7 +211,7 @@ int kmeans_expectation(matrix data, int *assignments, matrix centers)
 
 void kmeans_maximization(matrix data, int *assignments, matrix centers)
 {
-    matrix old_centers = make_matrix(centers.rows, centers.cols);
+    const matrix old_centers = make_matrix(centers.rows, centers.cols);
 
     int i, j;
     int *counts = (int*)calloc(centers.rows, sizeof(int));
@@ -257,9 +246,8 @@ void kmeans_maximization(matrix data, int *assignments, matrix centers)
 
 
 void random_centers(matrix data, matrix centers) {
-    int i;
     int *s = sample(data.rows);
-    for (i = 0; i < centers.rows; ++i) {
+    for (int i = 0; i < centers.rows; ++i) {
         copy(data.vals[s[i]], centers.vals[i], data.cols);
     }
     free(s);
@@ -271,8 +259,8 @@ int *sample(int n)
     int* s = (int*)calloc(n, sizeof(int));
     for (i = 0; i < n; ++i) s[i] = i;
     for (i = n - 1; i >= 0; --i) {
-        int swap = s[i];
-        int index = rand() % (i + 1);
+        const int swap = s[i];
+        const int index = rand() % (i + 1);
         s[i] = s[index];
         s[index] = swap;
     }
@@ -282,24 +270,23 @@ int *sample(int n)
 float dist(float *x, float *y, int n)
 {
     //printf(" x0 = %f, x1 = %f, y0 = %f, y1 = %f \n", x[0], x[1], y[0], y[1]);
-    float mw = (x[0] < y[0]) ? x[0] : y[0];
-    float mh = (x[1] < y[1]) ? x[1] : y[1];
-    float inter = mw*mh;
-    float sum = x[0] * x[1] + y[0] * y[1];
-    float un = sum - inter;
-    float iou = inter / un;
+    const float mw = (x[0] < y[0]) ? x[0] : y[0];
+    const float mh = (x[1] < y[1]) ? x[1] : y[1];
+    const float inter = mw*mh;
+    const float sum = x[0] * x[1] + y[0] * y[1];
+    const float un = sum - inter;
+    const float iou = inter / un;
     return 1 - iou;
 }
 
 void copy(float *x, float *y, int n)
 {
-    int i;
-    for (i = 0; i < n; ++i) y[i] = x[i];
+    for (int i = 0; i < n; ++i) y[i] = x[i];
 }
 
 model do_kmeans(matrix data, int k)
 {
-    matrix centers = make_matrix(k, data.cols);
+    const matrix centers = make_matrix(k, data.cols);
     int* assignments = (int*)calloc(data.rows, sizeof(int));
     //smart_centers(data, centers);
     random_centers(data, centers);  // IoU = 67.31% after kmeans

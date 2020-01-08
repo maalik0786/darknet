@@ -10,13 +10,13 @@
 
 int deconvolutional_out_height(deconvolutional_layer l)
 {
-    int h = l.stride*(l.h - 1) + l.size;
+    const int h = l.stride*(l.h - 1) + l.size;
     return h;
 }
 
 int deconvolutional_out_width(deconvolutional_layer l)
 {
-    int w = l.stride*(l.w - 1) + l.size;
+    const int w = l.stride*(l.w - 1) + l.size;
     return w;
 }
 
@@ -27,19 +27,17 @@ int deconvolutional_out_size(deconvolutional_layer l)
 
 image get_deconvolutional_image(deconvolutional_layer l)
 {
-    int h,w,c;
-    h = deconvolutional_out_height(l);
-    w = deconvolutional_out_width(l);
-    c = l.n;
+    int h = deconvolutional_out_height(l);
+    int w = deconvolutional_out_width(l);
+    int c = l.n;
     return float_to_image(w,h,c,l.output);
 }
 
 image get_deconvolutional_delta(deconvolutional_layer l)
 {
-    int h,w,c;
-    h = deconvolutional_out_height(l);
-    w = deconvolutional_out_width(l);
-    c = l.n;
+    int h = deconvolutional_out_height(l);
+    int w = deconvolutional_out_width(l);
+    int c = l.n;
     return float_to_image(w,h,c,l.delta);
 }
 
@@ -62,13 +60,13 @@ deconvolutional_layer make_deconvolutional_layer(int batch, int h, int w, int c,
 
     l.biases = (float*)calloc(n, sizeof(float));
     l.bias_updates = (float*)calloc(n, sizeof(float));
-    float scale = 1./sqrt(size*size*c);
+    const float scale = 1./sqrt(size*size*c);
     for(i = 0; i < c*n*size*size; ++i) l.weights[i] = scale*rand_normal();
     for(i = 0; i < n; ++i){
         l.biases[i] = scale;
     }
-    int out_h = deconvolutional_out_height(l);
-    int out_w = deconvolutional_out_width(l);
+    const int out_h = deconvolutional_out_height(l);
+    const int out_w = deconvolutional_out_width(l);
 
     l.out_h = out_h;
     l.out_w = out_w;
@@ -107,8 +105,8 @@ void resize_deconvolutional_layer(deconvolutional_layer *l, int h, int w)
 {
     l->h = h;
     l->w = w;
-    int out_h = deconvolutional_out_height(*l);
-    int out_w = deconvolutional_out_width(*l);
+    const int out_h = deconvolutional_out_height(*l);
+    const int out_w = deconvolutional_out_width(*l);
 
     l->col_image = (float*)realloc(l->col_image,
                                 out_h*out_w*l->size*l->size*l->c*sizeof(float));
@@ -193,7 +191,7 @@ void backward_deconvolutional_layer(deconvolutional_layer l, network_state state
 
 void update_deconvolutional_layer(deconvolutional_layer l, int skip, float learning_rate, float momentum, float decay)
 {
-    int size = l.size*l.size*l.c*l.n;
+    const int size = l.size*l.size*l.c*l.n;
     axpy_cpu(l.n, learning_rate, l.bias_updates, 1, l.biases, 1);
     scal_cpu(l.n, momentum, l.bias_updates, 1);
 

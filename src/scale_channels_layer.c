@@ -95,8 +95,8 @@ void backward_scale_channels_layer(const layer l, network_state state)
 #ifdef GPU
 void forward_scale_channels_layer_gpu(const layer l, network_state state)
 {
-    int size = l.batch * l.out_c * l.out_w * l.out_h;
-    int channel_size = l.out_w * l.out_h;
+    const int size = l.batch * l.out_c * l.out_w * l.out_h;
+    const int channel_size = l.out_w * l.out_h;
 
     scale_channels_gpu(state.net.layers[l.index].output_gpu, size, channel_size, state.input, l.output_gpu);
 
