@@ -147,10 +147,7 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Test
       <Optimization>O2</Optimization>
     </CudaLink>
     <PostBuildEvent>
-      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\AiInvestResearch\External\FastYolo\yolo_cpp_dll.dll
-
-xcopy /y C:\Code\AiInvestResearch\External\FastYolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\x64\Release\netcoreapp3.0\
-xcopy /y C:\Code\AiInvestResearch\External\FastYolo\x64\yolo_cpp_dll.* C:\Code\AiInvestResearch\External\FastYolo.Tests\bin\Release\netcoreapp3.0\</Command>
+      <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll $(SolutionDir)yolo_cpp_dll.dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
