@@ -463,14 +463,17 @@ float train_networks(network *nets, int n, data d, int interval)
 float *get_network_output_layer_gpu(network net, int i)
 {
     const auto l = net.layers[i];
-    if(l.type != REGION) cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
+    if(l.type != REGION)
+        cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
     return l.output;
 }
 
 float *get_network_output_gpu(network net)
 {
     int i;
-    for(i = net.n-1; i > 0; --i) if(net.layers[i].type != COST) break;
+    for(i = net.n-1; i > 0; --i)
+        if(net.layers[i].type != COST)
+            break;
     return get_network_output_layer_gpu(net, i);
 }
 

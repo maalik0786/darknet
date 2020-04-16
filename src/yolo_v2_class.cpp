@@ -441,8 +441,10 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
 
     if (net.w != img.w && net.h != img.h)
     {
-        const auto sized = resize_image(img, net.w, net.h);
+        image sized = resize_image(img, net.w, net.h);
         network_predict_gpu(net, sized.data);
+        if (sized.data)
+            free(sized.data);
     }
     else
         network_predict_gpu(net, img.data);
@@ -450,7 +452,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     auto nboxes = 0;
     const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-    auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
+        auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
 
     free_detections(dets, nboxes);
     return bbox_vec;
@@ -474,7 +476,8 @@ LIB_API std::vector<bbox_t> Detector::tracking_id(std::vector<bbox_t> cur_bbox_v
         for (auto& i : cur_bbox_vec)
             i.track_id = det_gpu.track_id[i.obj_id]++;
         prev_bbox_vec_deque.push_front(cur_bbox_vec);
-        if (prev_bbox_vec_deque.size() > frames_story) prev_bbox_vec_deque.pop_back();
+        if (prev_bbox_vec_deque.size() > frames_story)
+            prev_bbox_vec_deque.pop_back();
         return cur_bbox_vec;
     }
 
