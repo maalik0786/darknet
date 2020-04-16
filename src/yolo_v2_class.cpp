@@ -441,6 +441,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
 
     if (net.w != img.w && net.h != img.h)
     {
+        std::cout << "image is resizing from " << img.w << " x " << img.h << " to " << net.w << " x " << net.h << std::endl;
         image sized = resize_image(img, net.w, net.h);
         network_predict_gpu(net, sized.data);
         if (sized.data)
