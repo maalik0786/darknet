@@ -64,6 +64,9 @@ extern "C" LIB_API int init(const char *configuration_filename, const char *weig
 extern "C" LIB_API int detect_image(const char *filename, bbox_t_container &container);
 extern "C" LIB_API int detect_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container);
 extern "C" LIB_API int track_objects(const float* data, const int width, const int height, const int channel, bbox_t_container & container);
+extern "C" LIB_API bool CheckIfImageWasResized();
+extern "C" LIB_API int GetDetectorNetworkWidth();
+extern "C" LIB_API int GetDetectorNetworkHeight();
 
 extern "C" LIB_API unsigned char* get_image(int capture_width, int capture_height, int display_width, int display_height, int frame_rate, int flip_method);
 
@@ -86,16 +89,17 @@ public:
     LIB_API Detector(std::string cfg_filename, std::string weight_filename, int gpu_id = 0);
     LIB_API ~Detector();
 
-    LIB_API std::vector<bbox_t> detect(std::string image_filename, float thresh = 0.2, bool use_mean = false) const;
-    LIB_API std::vector<bbox_t> detect(image_t img, float thresh = 0.2, bool use_mean = false) const;
+    LIB_API std::vector<bbox_t> detect(std::string image_filename, float thresh = 0.2, bool use_mean = false);
+    LIB_API std::vector<bbox_t> detect(image_t img, float thresh = 0.2, bool use_mean = false);
 		std::vector<bbox_t> save_bounding_boxes_into_vector(image img, float thresh, struct layer l, detection* dets, int nboxes) const;
 
-    LIB_API std::vector<bbox_t> detect(image img, float thresh = 0.2) const;
+    LIB_API std::vector<bbox_t> detect(image img, float thresh = 0.2);
     static LIB_API image_t load_image(std::string image_filename);
     static LIB_API void free_image(image_t m);
     LIB_API int get_net_width() const;
     LIB_API int get_net_height() const;
     LIB_API int get_net_color_depth() const;
+    bool didHaveToResizeImage;
 
     LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history = true, int const frames_story = 30, int const max_dist = 40);
 

@@ -57,6 +57,21 @@ int track_objects(const float* data, const int width, const int height, const in
     return tracking.size();
 }
 
+bool CheckIfImageWasResized()
+{
+    return detector->didHaveToResizeImage;
+}
+
+int GetDetectorNetworkWidth()
+{
+    return detector->get_net_width();
+}
+
+int GetDetectorNetworkHeight()
+{
+    return detector->get_net_width();
+}
+
 std::string gstreamer_pipeline(int capture_width, int capture_height, int display_width, int display_height,
                                int frame_rate, int flip_method)
 {
@@ -254,9 +269,8 @@ LIB_API int Detector::get_net_color_depth() const
     return detector_gpu.net.c;
 }
 
-
 LIB_API std::vector<bbox_t> Detector::detect(const std::string image_filename, const float thresh,
-                                             const bool use_mean) const
+                                             const bool use_mean)
 {
     const std::shared_ptr<image_t> image_ptr(new image_t, [](image_t* img)
     {
@@ -311,7 +325,7 @@ LIB_API void Detector::free_image(const image_t img)
         free(img.data);
 }
 
-LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thresh, const bool use_mean) const
+LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thresh, const bool use_mean)
 {
     auto& detector_gpu = *static_cast<detector_gpu_t*>(detector_gpu_ptr.get());
     auto& net = detector_gpu.net;
@@ -338,7 +352,10 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
         memcpy(sized.data, im.data, im.h * im.w * im.c * sizeof(float));
     }
     else
+    {
+        didHaveToResizeImage = true;
         sized = resize_image(im, net.w, net.h);
+    }
 
     auto l = net.layers[net.n - 1];
 
@@ -432,7 +449,7 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
     return bbox_vec;
 }
 
-LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh) const
+LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh)
 {
     auto& detector_gpu = *static_cast<detector_gpu_t*>(detector_gpu_ptr.get());
     auto& net = detector_gpu.net;
@@ -442,6 +459,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     if (net.w != img.w && net.h != img.h)
     {
         std::cout << "image is resizing from " << img.w << " x " << img.h << " to " << net.w << " x " << net.h << std::endl;
+        didHaveToResizeImage = true;
         image sized = resize_image(img, net.w, net.h);
         network_predict_gpu(net, sized.data);
         if (sized.data)
