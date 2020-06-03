@@ -200,7 +200,17 @@ Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cu
     detector_gpu_ptr = std::make_shared<detector_gpu_t>();
     auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
-    auto& net = detector_gpu.net;
+    _cfg_filename = cfg_filename;
+    _weight_filename = weight_filename;
+
+    char *cfgfile = const_cast<char *>(_cfg_filename.c_str());
+    char *weightfile = const_cast<char *>(_weight_filename.c_str());
+
+    net = parse_network_cfg_custom(cfgfile, 1, 1);
+    if (weightfile) {
+        load_weights(&net, weightfile);
+    }
+    set_batch_network(&net, 1);
     net.gpu_index = cur_gpu_id;
 
     const auto cfg_file = const_cast<char *>(cfg_filename.data());
@@ -307,8 +317,8 @@ static image load_image_stb(char* filename, const int channels)
 
 LIB_API image_t Detector::load_image(const std::string image_filename)
 {
-    const auto input = const_cast<char *>(image_filename.data());
-    const auto im = load_image_stb(input, 3);
+    char *input = const_cast<char *>(image_filename.c_str());
+    image im = load_image_stb(input, 3);
 
     image_t img{};
     img.c = im.c;

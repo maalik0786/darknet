@@ -18,8 +18,8 @@ typedef struct {
 char *fgetgo(FILE *fp)
 {
     if(feof(fp)) return 0;
-    const size_t size = 94;
-    char* line = (char*)malloc(size * sizeof(char));
+    size_t size = 94;
+    char* line = (char*)xmalloc(size * sizeof(char));
     if(size != fread(line, sizeof(char), size, fp)){
         free(line);
         return 0;
@@ -32,33 +32,35 @@ moves load_go_moves(char *filename)
 {
     moves m;
     m.n = 128;
-    m.data = (char**)calloc(128, sizeof(char*));
+    m.data = (char**)xcalloc(128, sizeof(char*));
     FILE *fp = fopen(filename, "rb");
     int count = 0;
     char *line = 0;
     while((line = fgetgo(fp))){
         if(count >= m.n){
             m.n *= 2;
-            m.data = (char**)realloc(m.data, m.n * sizeof(char*));
+            m.data = (char**)xrealloc(m.data, m.n * sizeof(char*));
         }
         m.data[count] = line;
         ++count;
     }
     printf("%d\n", count);
     m.n = count;
-    m.data = (char**)realloc(m.data, count * sizeof(char*));
+    m.data = (char**)xrealloc(m.data, count * sizeof(char*));
+    fclose(fp);
     return m;
 }
 
 void string_to_board(char *s, float *board)
 {
+    int i, j;
     //memset(board, 0, 1*19*19*sizeof(float));
     int count = 0;
-    for(int i = 0; i < 91; ++i){
-        const char c = s[i];
-        for(int j = 0; j < 4; ++j){
-            const int me = (c >> (2*j)) & 1;
-            const int you = (c >> (2*j + 1)) & 1;
+    for(i = 0; i < 91; ++i){
+        char c = s[i];
+        for(j = 0; j < 4; ++j){
+            int me = (c >> (2*j)) & 1;
+            int you = (c >> (2*j + 1)) & 1;
             if (me) board[count] = 1;
             else if (you) board[count] = -1;
             else board[count] = 0;
@@ -70,12 +72,13 @@ void string_to_board(char *s, float *board)
 
 void board_to_string(char *s, float *board)
 {
+    int i, j;
     memset(s, 0, (19*19/4+1)*sizeof(char));
     int count = 0;
-    for(int i = 0; i < 91; ++i){
-        for(int j = 0; j < 4; ++j){
-            const int me = (board[count] == 1);
-            const int you = (board[count] == -1);
+    for(i = 0; i < 91; ++i){
+        for(j = 0; j < 4; ++j){
+            int me = (board[count] == 1);
+            int you = (board[count] == -1);
             if (me) s[i] = s[i] | (1<<(2*j));
             if (you) s[i] = s[i] | (1<<(2*j + 1));
             ++count;
@@ -86,19 +89,20 @@ void board_to_string(char *s, float *board)
 
 void random_go_moves(moves m, float *boards, float *labels, int n)
 {
+    int i;
     memset(labels, 0, 19*19*n*sizeof(float));
-    for(int i = 0; i < n; ++i){
+    for(i = 0; i < n; ++i){
         char *b = m.data[rand()%m.n];
-        const int row = b[0];
-        const int col = b[1];
+        int row = b[0];
+        int col = b[1];
         labels[col + 19*(row + i*19)] = 1;
         string_to_board(b+2, boards+i*19*19);
         boards[col + 19*(row + i*19)] = 0;
 
-        const int flip = rand()%2;
-        const int rotate = rand()%4;
-        const image in = float_to_image(19, 19, 1, boards+i*19*19);
-        const image out = float_to_image(19, 19, 1, labels+i*19*19);
+        int flip = rand()%2;
+        int rotate = rand()%4;
+        image in = float_to_image(19, 19, 1, boards+i*19*19);
+        image out = float_to_image(19, 19, 1, labels+i*19*19);
         if(flip){
             flip_image(in);
             flip_image(out);
@@ -124,8 +128,8 @@ void train_go(char *cfgfile, char *weightfile)
     char* backup_directory = "backup/";
 
     char buff[256];
-    float* board = (float*)calloc(19 * 19 * net.batch, sizeof(float));
-    float* move = (float*)calloc(19 * 19 * net.batch, sizeof(float));
+    float* board = (float*)xcalloc(19 * 19 * net.batch, sizeof(float));
+    float* move = (float*)xcalloc(19 * 19 * net.batch, sizeof(float));
     moves m = load_go_moves("backup/go.train");
     //moves m = load_go_moves("games.txt");
 
@@ -162,12 +166,14 @@ void train_go(char *cfgfile, char *weightfile)
 
     free_network(net);
     free(base);
+    free(board);
+    free(move);
 }
 
 void propagate_liberty(float *board, int *lib, int *visited, int row, int col, int side)
 {
     if (row < 0 || row > 18 || col < 0 || col > 18) return;
-    const int index = row*19 + col;
+    int index = row*19 + col;
     if (board[index] != side) return;
     if (visited[index]) return;
     visited[index] = 1;
@@ -181,12 +187,13 @@ void propagate_liberty(float *board, int *lib, int *visited, int row, int col, i
 
 int *calculate_liberties(float *board)
 {
-    int* lib = (int*)calloc(19 * 19, sizeof(int));
+    int* lib = (int*)xcalloc(19 * 19, sizeof(int));
     int visited[361];
-    for(int j = 0; j < 19; ++j){
-        for(int i = 0; i < 19; ++i){
+    int i, j;
+    for(j = 0; j < 19; ++j){
+        for(i = 0; i < 19; ++i){
             memset(visited, 0, 19*19*sizeof(int));
-            const int index = j*19 + i;
+            int index = j*19 + i;
             if(board[index] == 0){
                 if ((i > 0)  && board[index - 1]) propagate_liberty(board, lib, visited, j, i-1, board[index-1]);
                 if ((i < 18) && board[index + 1]) propagate_liberty(board, lib, visited, j, i+1, board[index+1]);
@@ -202,20 +209,20 @@ void print_board(float *board, int swap, int *indexes)
 {
     //FILE *stream = stdout;
     FILE *stream = stderr;
-    int i;
+    int i,j,n;
     fprintf(stream, "\n\n");
     fprintf(stream, "   ");
     for(i = 0; i < 19; ++i){
         fprintf(stream, "%c ", 'A' + i + 1*(i > 7 && noi));
     }
     fprintf(stream, "\n");
-    for(int j = 0; j < 19; ++j){
+    for(j = 0; j < 19; ++j){
         fprintf(stream, "%2d", (inverted) ? 19-j : j+1);
         for(i = 0; i < 19; ++i){
-            const int index = j*19 + i;
+            int index = j*19 + i;
             if(indexes){
                 int found = 0;
-                for (int n = 0; n < n_ind; ++n) {
+                for (n = 0; n < n_ind; ++n) {
                     if(index == indexes[n]){
                         found = 1;
                         /*
@@ -246,7 +253,8 @@ void print_board(float *board, int swap, int *indexes)
 
 void flip_board(float *board)
 {
-    for(int i = 0; i < 19*19; ++i){
+    int i;
+    for(i = 0; i < 19*19; ++i){
         board[i] = -board[i];
     }
 }
@@ -403,8 +411,8 @@ void valid_go(char *cfgfile, char *weightfile, int multi)
     set_batch_network(&net, 1);
     printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net.learning_rate, net.momentum, net.decay);
 
-    float* board = (float*)calloc(19 * 19, sizeof(float));
-    float* move = (float*)calloc(19 * 19, sizeof(float));
+    float* board = (float*)xcalloc(19 * 19, sizeof(float));
+    float* move = (float*)xcalloc(19 * 19, sizeof(float));
     moves m = load_go_moves("backup/go.test");
 
     int N = m.n;
@@ -421,6 +429,8 @@ void valid_go(char *cfgfile, char *weightfile, int multi)
         if(index == truth) ++correct;
         printf("%d Accuracy %f\n", i, (float) correct/(i+1));
     }
+    free(board);
+    free(move);
 }
 
 void engine_go(char *filename, char *weightfile, int multi)
@@ -431,9 +441,9 @@ void engine_go(char *filename, char *weightfile, int multi)
     }
     srand(time(0));
     set_batch_network(&net, 1);
-    float* board = (float*)calloc(19 * 19, sizeof(float));
-    char* one = (char*)calloc(91, sizeof(char));
-    char* two = (char*)calloc(91, sizeof(char));
+    float* board = (float*)xcalloc(19 * 19, sizeof(float));
+    char* one = (char*)xcalloc(91, sizeof(char));
+    char* two = (char*)xcalloc(91, sizeof(char));
     int passed = 0;
     while(1){
         char buff[256];
@@ -604,8 +614,8 @@ void test_go(char *cfg, char *weights, int multi)
     }
     srand(time(0));
     set_batch_network(&net, 1);
-    float* board = (float*)calloc(19 * 19, sizeof(float));
-    float* move = (float*)calloc(19 * 19, sizeof(float));
+    float* board = (float*)xcalloc(19 * 19, sizeof(float));
+    float* move = (float*)xcalloc(19 * 19, sizeof(float));
     int color = 1;
     while(1){
         float *output = network_predict(net, board);
@@ -696,12 +706,12 @@ void test_go(char *cfg, char *weights, int multi)
 float score_game(float *board)
 {
     FILE *f = fopen("game.txt", "w");
-    int i;
+    int i, j;
     int count = 3;
     fprintf(f, "komi 6.5\n");
     fprintf(f, "boardsize 19\n");
     fprintf(f, "clear_board\n");
-    for(int j = 0; j < 19; ++j){
+    for(j = 0; j < 19; ++j){
         for(i = 0; i < 19; ++i){
             if(board[j*19 + i] == 1) fprintf(f, "play black %c%d\n", 'A'+i+(i>=8), 19-j);
             if(board[j*19 + i] == -1) fprintf(f, "play white %c%d\n", 'A'+i+(i>=8), 19-j);
@@ -724,7 +734,7 @@ float score_game(float *board)
     char player = 0;
     while((l = fgetl(p))){
         fprintf(stderr, "%s  \t", l);
-        const int n = sscanf(l, "= %c+%f", &player, &score);
+        int n = sscanf(l, "= %c+%f", &player, &score);
         free(l);
         if (n == 2) break;
     }
@@ -756,9 +766,9 @@ void self_go(char *filename, char *weightfile, char *f2, char *w2, int multi)
     int count = 0;
     set_batch_network(&net, 1);
     set_batch_network(&net2, 1);
-    float* board = (float*)calloc(19 * 19, sizeof(float));
-    char* one = (char*)calloc(91, sizeof(char));
-    char* two = (char*)calloc(91, sizeof(char));
+    float* board = (float*)xcalloc(19 * 19, sizeof(float));
+    char* one = (char*)xcalloc(91, sizeof(char));
+    char* two = (char*)xcalloc(91, sizeof(char));
     int done = 0;
     int player = 1;
     int p1 = 0;
@@ -813,6 +823,9 @@ void self_go(char *filename, char *weightfile, char *f2, char *w2, int multi)
 
         player = -player;
     }
+    free(board);
+    free(one);
+    free(two);
 }
 
 void run_go(int argc, char **argv)
@@ -827,7 +840,7 @@ void run_go(int argc, char **argv)
     char *weights = (argc > 4) ? argv[4] : 0;
     char *c2 = (argc > 5) ? argv[5] : 0;
     char *w2 = (argc > 6) ? argv[6] : 0;
-    const int multi = find_arg(argc, argv, "-multi");
+    int multi = find_arg(argc, argv, "-multi");
     if(0==strcmp(argv[2], "train")) train_go(cfg, weights);
     else if(0==strcmp(argv[2], "valid")) valid_go(cfg, weights, multi);
     else if(0==strcmp(argv[2], "self")) self_go(cfg, weights, c2, w2, multi);

@@ -1,4 +1,5 @@
 #include "reorg_old_layer.h"
+#include "utils.h"
 #include "dark_cuda.h"
 #include "blas.h"
 #include <stdio.h>
@@ -26,9 +27,9 @@ layer make_reorg_old_layer(int batch, int w, int h, int c, int stride, int rever
     fprintf(stderr, "reorg_old              /%2d  %4d x%4d x%4d   ->  %4d x%4d x%4d\n",  stride, w, h, c, l.out_w, l.out_h, l.out_c);
     l.outputs = l.out_h * l.out_w * l.out_c;
     l.inputs = h*w*c;
-    const int output_size = l.out_h * l.out_w * l.out_c * batch;
-    l.output = (float*)calloc(output_size, sizeof(float));
-    l.delta = (float*)calloc(output_size, sizeof(float));
+    int output_size = l.out_h * l.out_w * l.out_c * batch;
+    l.output = (float*)xcalloc(output_size, sizeof(float));
+    l.delta = (float*)xcalloc(output_size, sizeof(float));
 
     l.forward = forward_reorg_old_layer;
     l.backward = backward_reorg_old_layer;
@@ -44,8 +45,8 @@ layer make_reorg_old_layer(int batch, int w, int h, int c, int stride, int rever
 
 void resize_reorg_old_layer(layer *l, int w, int h)
 {
-    const int stride = l->stride;
-    const int c = l->c;
+    int stride = l->stride;
+    int c = l->c;
 
     l->h = h;
     l->w = w;
@@ -62,10 +63,10 @@ void resize_reorg_old_layer(layer *l, int w, int h)
 
     l->outputs = l->out_h * l->out_w * l->out_c;
     l->inputs = l->outputs;
-    const int output_size = l->outputs * l->batch;
+    int output_size = l->outputs * l->batch;
 
-    l->output = (float*)realloc(l->output, output_size * sizeof(float));
-    l->delta = (float*)realloc(l->delta, output_size * sizeof(float));
+    l->output = (float*)xrealloc(l->output, output_size * sizeof(float));
+    l->delta = (float*)xrealloc(l->delta, output_size * sizeof(float));
 
 #ifdef GPU
     cuda_free(l->output_gpu);

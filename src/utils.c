@@ -1,3 +1,6 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,11 +17,38 @@
 #include "gettimeofday.h"
 #else
 #include <sys/time.h>
+#include <sys/stat.h>
 #endif
+
 
 #ifndef USE_CMAKE_LIBS
 #pragma warning(disable: 4996)
 #endif
+
+void *xmalloc(size_t size) {
+    void *ptr=malloc(size);
+    if(!ptr) {
+        malloc_error();
+    }
+    return ptr;
+}
+
+void *xcalloc(size_t nmemb, size_t size) {
+    void *ptr=calloc(nmemb,size);
+    if(!ptr) {
+        calloc_error();
+    }
+    memset(ptr, 0, nmemb * size);
+    return ptr;
+}
+
+void *xrealloc(void *ptr, size_t size) {
+    ptr=realloc(ptr,size);
+    if(!ptr) {
+        realloc_error();
+    }
+    return ptr;
+}
 
 double what_time_is_it_now()
 {
@@ -38,31 +68,36 @@ int *read_map(char *filename)
     if(!file) file_error(filename);
     while((str=fgetl(file))){
         ++n;
-        map = (int*)realloc(map, n * sizeof(int));
+        map = (int*)xrealloc(map, n * sizeof(int));
         map[n-1] = atoi(str);
+        free(str);
     }
+    if (file) fclose(file);
     return map;
 }
 
 void sorta_shuffle(void *arr, size_t n, size_t size, size_t sections)
 {
-    for(size_t i = 0; i < sections; ++i){
-        const size_t start = n*i/sections;
-        const size_t end = n*(i+1)/sections;
-        const size_t num = end-start;
+    size_t i;
+    for(i = 0; i < sections; ++i){
+        size_t start = n*i/sections;
+        size_t end = n*(i+1)/sections;
+        size_t num = end-start;
         shuffle((char*)arr+(start*size), num, size);
     }
 }
 
 void shuffle(void *arr, size_t n, size_t size)
 {
-    void* swp = (void*)calloc(1, size);
-    for(size_t i = 0; i < n-1; ++i){
-        const size_t j = i + random_gen()/(RAND_MAX / (n-i)+1);
+    size_t i;
+    void* swp = (void*)xcalloc(1, size);
+    for(i = 0; i < n-1; ++i){
+        size_t j = i + random_gen()/(RAND_MAX / (n-i)+1);
         memcpy(swp,            (char*)arr+(j*size), size);
         memcpy((char*)arr+(j*size), (char*)arr+(i*size), size);
         memcpy((char*)arr+(i*size), swp,          size);
     }
+    free(swp);
 }
 
 void del_arg(int argc, char **argv, int index)
@@ -74,7 +109,8 @@ void del_arg(int argc, char **argv, int index)
 
 int find_arg(int argc, char* argv[], char *arg)
 {
-    for(int i = 0; i < argc; ++i) {
+    int i;
+    for(i = 0; i < argc; ++i) {
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)) {
             del_arg(argc, argv, i);
@@ -86,7 +122,8 @@ int find_arg(int argc, char* argv[], char *arg)
 
 int find_int_arg(int argc, char **argv, char *arg, int def)
 {
-    for(int i = 0; i < argc-1; ++i){
+    int i;
+    for(i = 0; i < argc-1; ++i){
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)){
             def = atoi(argv[i+1]);
@@ -100,7 +137,8 @@ int find_int_arg(int argc, char **argv, char *arg, int def)
 
 float find_float_arg(int argc, char **argv, char *arg, float def)
 {
-    for(int i = 0; i < argc-1; ++i){
+    int i;
+    for(i = 0; i < argc-1; ++i){
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)){
             def = atof(argv[i+1]);
@@ -112,9 +150,10 @@ float find_float_arg(int argc, char **argv, char *arg, float def)
     return def;
 }
 
-char *find_char_arg(const int argc, char **argv, char *arg, char *def)
+char *find_char_arg(int argc, char **argv, char *arg, char *def)
 {
-    for(int i = 0; i < argc-1; ++i){
+    int i;
+    for(i = 0; i < argc-1; ++i){
         if(!argv[i]) continue;
         if(0==strcmp(argv[i], arg)){
             def = argv[i+1];
@@ -154,9 +193,10 @@ char int_to_alphanum(int i)
 
 void pm(int M, int N, float *A)
 {
-    for(int i = 0 ; i < M; ++i){
+    int i,j;
+    for(i =0 ; i < M; ++i){
         printf("%d ", i+1);
-        for(int j = 0; j < N; ++j){
+        for(j = 0; j < N; ++j){
             printf("%2.4f, ", A[i*N+j]);
         }
         printf("\n");
@@ -170,21 +210,21 @@ void find_replace(const char* str, char* orig, char* rep, char* output)
     char *p;
 
     sprintf(buffer, "%s", str);
-    if(!(p = strstr(buffer, orig))){  // Is 'orig' even in 'str'?
-        sprintf(output, "%s", str);
+    if (!(p = strstr(buffer, orig))) {  // Is 'orig' even in 'str'?
+        sprintf(output, "%s", buffer);
         free(buffer);
         return;
     }
 
     *p = '\0';
 
-    sprintf(output, "%s%s%s", buffer, rep, p+strlen(orig));
+    sprintf(output, "%s%s%s", buffer, rep, p + strlen(orig));
     free(buffer);
 }
 
 void trim(char *str)
 {
-    char* buffer = (char*)calloc(8192, sizeof(char));
+    char* buffer = (char*)xcalloc(8192, sizeof(char));
     sprintf(buffer, "%s", str);
 
     char *p = buffer;
@@ -206,10 +246,10 @@ void find_replace_extension(char *str, char *orig, char *rep, char *output)
 
     sprintf(buffer, "%s", str);
     char *p = strstr(buffer, orig);
-    const int offset = (p - buffer);
-    const int chars_from_end = strlen(buffer) - offset;
+    int offset = (p - buffer);
+    int chars_from_end = strlen(buffer) - offset;
     if (!p || chars_from_end != strlen(orig)) {  // Is 'orig' even in 'str' AND is 'orig' found at the end of 'str'?
-        sprintf(output, "%s", str);
+        sprintf(output, "%s", buffer);
         free(buffer);
         return;
     }
@@ -266,13 +306,13 @@ float sec(clock_t clocks)
 
 void top_k(float *a, int n, int k, int *index)
 {
-    int j;
+    int i,j;
     for(j = 0; j < k; ++j) index[j] = -1;
-    for(int i = 0; i < n; ++i){
+    for(i = 0; i < n; ++i){
         int curr = i;
         for(j = 0; j < k; ++j){
             if((index[j] < 0) || a[curr] > a[index[j]]){
-                const int swap = curr;
+                int swap = curr;
                 curr = index[j];
                 index[j] = swap;
             }
@@ -289,7 +329,19 @@ void error(const char *s)
 
 void malloc_error()
 {
-    fprintf(stderr, "Malloc error\n");
+    fprintf(stderr, "xMalloc error - possibly out of CPU RAM \n");
+    exit(EXIT_FAILURE);
+}
+
+void calloc_error()
+{
+    fprintf(stderr, "Calloc error - possibly out of CPU RAM \n");
+    exit(EXIT_FAILURE);
+}
+
+void realloc_error()
+{
+    fprintf(stderr, "Realloc error - possibly out of CPU RAM \n");
     exit(EXIT_FAILURE);
 }
 
@@ -301,10 +353,11 @@ void file_error(char *s)
 
 list *split_str(char *s, char delim)
 {
-    const size_t len = strlen(s);
+    size_t i;
+    size_t len = strlen(s);
     list *l = make_list();
     list_insert(l, s);
-    for(size_t i = 0; i < len; ++i){
+    for(i = 0; i < len; ++i){
         if(s[i] == delim){
             s[i] = '\0';
             list_insert(l, &(s[i+1]));
@@ -315,10 +368,11 @@ list *split_str(char *s, char delim)
 
 void strip(char *s)
 {
-    const size_t len = strlen(s);
+    size_t i;
+    size_t len = strlen(s);
     size_t offset = 0;
-    for(size_t i = 0; i < len; ++i){
-        const char c = s[i];
+    for(i = 0; i < len; ++i){
+        char c = s[i];
         if(c==' '||c=='\t'||c=='\n'||c =='\r'||c==0x0d||c==0x0a) ++offset;
         else s[i-offset] = c;
     }
@@ -328,10 +382,11 @@ void strip(char *s)
 
 void strip_args(char *s)
 {
-    const size_t len = strlen(s);
+    size_t i;
+    size_t len = strlen(s);
     size_t offset = 0;
-    for (size_t i = 0; i < len; ++i) {
-        const char c = s[i];
+    for (i = 0; i < len; ++i) {
+        char c = s[i];
         if (c == '\t' || c == '\n' || c == '\r' || c == 0x0d || c == 0x0a) ++offset;
         else s[i - offset] = c;
     }
@@ -340,10 +395,11 @@ void strip_args(char *s)
 
 void strip_char(char *s, char bad)
 {
-    const size_t len = strlen(s);
+    size_t i;
+    size_t len = strlen(s);
     size_t offset = 0;
-    for(size_t i = 0; i < len; ++i){
-        const char c = s[i];
+    for(i = 0; i < len; ++i){
+        char c = s[i];
         if(c==bad) ++offset;
         else s[i-offset] = c;
     }
@@ -352,7 +408,8 @@ void strip_char(char *s, char bad)
 
 void free_ptrs(void **ptrs, int n)
 {
-    for(int i = 0; i < n; ++i) free(ptrs[i]);
+    int i;
+    for(i = 0; i < n; ++i) free(ptrs[i]);
     free(ptrs);
 }
 
@@ -360,7 +417,7 @@ char *fgetl(FILE *fp)
 {
     if(feof(fp)) return 0;
     size_t size = 512;
-    char* line = (char*)malloc(size * sizeof(char));
+    char* line = (char*)xmalloc(size * sizeof(char));
     if(!fgets(line, size, fp)){
         free(line);
         return 0;
@@ -371,11 +428,7 @@ char *fgetl(FILE *fp)
     while((line[curr-1] != '\n') && !feof(fp)){
         if(curr == size-1){
             size *= 2;
-            line = (char*)realloc(line, size * sizeof(char));
-            if(!line) {
-                printf("%ld\n", size);
-                malloc_error();
-            }
+            line = (char*)xrealloc(line, size * sizeof(char));
         }
         size_t readsize = size-curr;
         if(readsize > INT_MAX) readsize = INT_MAX-1;
@@ -394,14 +447,14 @@ char *fgetl(FILE *fp)
 int read_int(int fd)
 {
     int n = 0;
-    const int next = read(fd, &n, sizeof(int));
+    int next = read(fd, &n, sizeof(int));
     if(next <= 0) return -1;
     return n;
 }
 
 void write_int(int fd, int n)
 {
-    const int next = write(fd, &n, sizeof(int));
+    int next = write(fd, &n, sizeof(int));
     if(next <= 0) error("read failed");
 }
 
@@ -409,7 +462,7 @@ int read_all_fail(int fd, char *buffer, size_t bytes)
 {
     size_t n = 0;
     while(n < bytes){
-        const int next = read(fd, buffer + n, bytes-n);
+        int next = read(fd, buffer + n, bytes-n);
         if(next <= 0) return 1;
         n += next;
     }
@@ -418,9 +471,9 @@ int read_all_fail(int fd, char *buffer, size_t bytes)
 
 int write_all_fail(int fd, char *buffer, size_t bytes)
 {
-    int n = 0;
+    size_t n = 0;
     while(n < bytes){
-        const int next = write(fd, buffer + n, bytes-n);
+        size_t next = write(fd, buffer + n, bytes-n);
         if(next <= 0) return 1;
         n += next;
     }
@@ -431,7 +484,7 @@ void read_all(int fd, char *buffer, size_t bytes)
 {
     size_t n = 0;
     while(n < bytes){
-        const int next = read(fd, buffer + n, bytes-n);
+        int next = read(fd, buffer + n, bytes-n);
         if(next <= 0) error("read failed");
         n += next;
     }
@@ -441,7 +494,7 @@ void write_all(int fd, char *buffer, size_t bytes)
 {
     size_t n = 0;
     while(n < bytes){
-        const size_t next = write(fd, buffer + n, bytes-n);
+        size_t next = write(fd, buffer + n, bytes-n);
         if(next <= 0) error("write failed");
         n += next;
     }
@@ -450,7 +503,10 @@ void write_all(int fd, char *buffer, size_t bytes)
 
 char *copy_string(char *s)
 {
-    char* copy = (char*)malloc(strlen(s) + 1);
+    if(!s) {
+        return NULL;
+    }
+    char* copy = (char*)xmalloc(strlen(s) + 1);
     strncpy(copy, s, strlen(s)+1);
     return copy;
 }
@@ -476,7 +532,8 @@ int count_fields(char *line)
 {
     int count = 0;
     int done = 0;
-    for(char* c = line; !done; ++c){
+    char *c;
+    for(c = line; !done; ++c){
         done = (*c == '\0');
         if(*c == ',' || done) ++count;
     }
@@ -485,7 +542,7 @@ int count_fields(char *line)
 
 float *parse_fields(char *line, int n)
 {
-    float* field = (float*)calloc(n, sizeof(float));
+    float* field = (float*)xcalloc(n, sizeof(float));
     char *c, *p, *end;
     int count = 0;
     int done = 0;
@@ -505,8 +562,9 @@ float *parse_fields(char *line, int n)
 
 float sum_array(float *a, int n)
 {
+    int i;
     float sum = 0;
-    for(int i = 0; i < n; ++i) sum += a[i];
+    for(i = 0; i < n; ++i) sum += a[i];
     return sum;
 }
 
@@ -518,8 +576,9 @@ float mean_array(float *a, int n)
 void mean_arrays(float **a, int n, int els, float *avg)
 {
     int i;
+    int j;
     memset(avg, 0, els*sizeof(float));
-    for(int j = 0; j < n; ++j){
+    for(j = 0; j < n; ++j){
         for(i = 0; i < els; ++i){
             avg[i] += a[j][i];
         }
@@ -531,17 +590,18 @@ void mean_arrays(float **a, int n, int els, float *avg)
 
 void print_statistics(float *a, int n)
 {
-    const float m = mean_array(a, n);
-    const float v = variance_array(a, n);
+    float m = mean_array(a, n);
+    float v = variance_array(a, n);
     printf("MSE: %.6f, Mean: %.6f, Variance: %.6f\n", mse_array(a, n), m, v);
 }
 
 float variance_array(float *a, int n)
 {
+    int i;
     float sum = 0;
-    const float mean = mean_array(a, n);
-    for(int i = 0; i < n; ++i) sum += (a[i] - mean)*(a[i]-mean);
-    const float variance = sum/n;
+    float mean = mean_array(a, n);
+    for(i = 0; i < n; ++i) sum += (a[i] - mean)*(a[i]-mean);
+    float variance = sum/n;
     return variance;
 }
 
@@ -561,40 +621,45 @@ float constrain(float min, float max, float a)
 
 float dist_array(float *a, float *b, int n, int sub)
 {
+    int i;
     float sum = 0;
-    for(int i = 0; i < n; i += sub) sum += pow(a[i]-b[i], 2);
+    for(i = 0; i < n; i += sub) sum += pow(a[i]-b[i], 2);
     return sqrt(sum);
 }
 
 float mse_array(float *a, int n)
 {
+    int i;
     float sum = 0;
-    for(int i = 0; i < n; ++i) sum += a[i]*a[i];
+    for(i = 0; i < n; ++i) sum += a[i]*a[i];
     return sqrt(sum/n);
 }
 
 void normalize_array(float *a, int n)
 {
+    int i;
     float mu = mean_array(a,n);
     float sigma = sqrt(variance_array(a,n));
-    for(int i = 0; i < n; ++i){
+    for(i = 0; i < n; ++i){
         a[i] = (a[i] - mu)/sigma;
     }
-    mu = mean_array(a,n);
-    sigma = sqrt(variance_array(a,n));
+    //mu = mean_array(a,n);
+    //sigma = sqrt(variance_array(a,n));
 }
 
 void translate_array(float *a, int n, float s)
 {
-    for(int i = 0; i < n; ++i){
+    int i;
+    for(i = 0; i < n; ++i){
         a[i] += s;
     }
 }
 
 float mag_array(float *a, int n)
 {
+    int i;
     float sum = 0;
-    for(int i = 0; i < n; ++i){
+    for(i = 0; i < n; ++i){
         sum += a[i]*a[i];
     }
     return sqrt(sum);
@@ -603,8 +668,9 @@ float mag_array(float *a, int n)
 // indicies to skip is a bit array
 float mag_array_skip(float *a, int n, int * indices_to_skip)
 {
+    int i;
     float sum = 0;
-    for (int i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i) {
         if (indices_to_skip[i] != 1) {
             sum += a[i] * a[i];
         }
@@ -614,17 +680,19 @@ float mag_array_skip(float *a, int n, int * indices_to_skip)
 
 void scale_array(float *a, int n, float s)
 {
-    for(int i = 0; i < n; ++i){
+    int i;
+    for(i = 0; i < n; ++i){
         a[i] *= s;
     }
 }
 
 int sample_array(float *a, int n)
 {
-    const float sum = sum_array(a, n);
+    float sum = sum_array(a, n);
     scale_array(a, n, 1. / sum);
     float r = rand_uniform(0, 1);
-    for (int i = 0; i < n; ++i) {
+    int i;
+    for (i = 0; i < n; ++i) {
         r = r - a[i];
         if (r <= 0) return i;
     }
@@ -633,11 +701,12 @@ int sample_array(float *a, int n)
 
 int sample_array_custom(float *a, int n)
 {
-    const float sum = sum_array(a, n);
+    float sum = sum_array(a, n);
     scale_array(a, n, 1./sum);
     float r = rand_uniform(0, 1);
-    const int start_index = rand_int(0, 0);
-    for(int i = 0; i < n; ++i){
+    int start_index = rand_int(0, 0);
+    int i;
+    for(i = 0; i < n; ++i){
         r = r - a[(i + start_index) % n];
         if (r <= 0) return i;
     }
@@ -647,9 +716,9 @@ int sample_array_custom(float *a, int n)
 int max_index(float *a, int n)
 {
     if(n <= 0) return -1;
-    int max_i = 0;
+    int i, max_i = 0;
     float max = a[0];
-    for(int i = 1; i < n; ++i){
+    for(i = 1; i < n; ++i){
         if(a[i] > max){
             max = a[i];
             max_i = i;
@@ -660,11 +729,11 @@ int max_index(float *a, int n)
 
 int top_max_index(float *a, int n, int k)
 {
-    float *values = (float*)calloc(k, sizeof(float));
-    int *indexes = (int*)calloc(k, sizeof(int));
     if (n <= 0) return -1;
-    int j;
-    for (int i = 0; i < n; ++i) {
+    float *values = (float*)xcalloc(k, sizeof(float));
+    int *indexes = (int*)xcalloc(k, sizeof(int));
+    int i, j;
+    for (i = 0; i < n; ++i) {
         for (j = 0; j < k; ++j) {
             if (a[i] > values[j]) {
                 values[j] = a[i];
@@ -675,8 +744,8 @@ int top_max_index(float *a, int n, int k)
     }
     int count = 0;
     for (j = 0; j < k; ++j) if (values[j] > 0) count++;
-    const int get_index = rand_int(0, count-1);
-    const int val = indexes[get_index];
+    int get_index = rand_int(0, count-1);
+    int val = indexes[get_index];
     free(indexes);
     free(values);
     return val;
@@ -685,7 +754,8 @@ int top_max_index(float *a, int n, int k)
 
 int int_index(int *a, int val, int n)
 {
-    for (int i = 0; i < n; ++i) {
+    int i;
+    for (i = 0; i < n; ++i) {
         if (a[i] == val) return i;
     }
     return -1;
@@ -694,11 +764,11 @@ int int_index(int *a, int val, int n)
 int rand_int(int min, int max)
 {
     if (max < min){
-        const int s = min;
+        int s = min;
         min = max;
         max = s;
     }
-    const int r = (random_gen()%(max - min + 1)) + min;
+    int r = (random_gen()%(max - min + 1)) + min;
     return r;
 }
 
@@ -750,13 +820,13 @@ size_t rand_size_t()
 float rand_uniform(float min, float max)
 {
     if(max < min){
-        const float swap = min;
+        float swap = min;
         min = max;
         max = swap;
     }
 
 #if (RAND_MAX < 65536)
-    const int rnd = rand()*(RAND_MAX + 1) + rand();
+        int rnd = rand()*(RAND_MAX + 1) + rand();
         return ((float)rnd / (RAND_MAX*RAND_MAX) * (max - min)) + min;
 #else
         return ((float)rand() / RAND_MAX * (max - min)) + min;
@@ -766,20 +836,55 @@ float rand_uniform(float min, float max)
 
 float rand_scale(float s)
 {
-    const float scale = rand_uniform_strong(1, s);
+    float scale = rand_uniform_strong(1, s);
     if(random_gen()%2) return scale;
     return 1./scale;
 }
 
 float **one_hot_encode(float *a, int n, int k)
 {
-    float** t = (float**)calloc(n, sizeof(float*));
-    for(int i = 0; i < n; ++i){
-        t[i] = (float*)calloc(k, sizeof(float));
-        const int index = (int)a[i];
+    int i;
+    float** t = (float**)xcalloc(n, sizeof(float*));
+    for(i = 0; i < n; ++i){
+        t[i] = (float*)xcalloc(k, sizeof(float));
+        int index = (int)a[i];
         t[i][index] = 1;
     }
     return t;
+}
+
+static unsigned int x = 123456789, y = 362436069, z = 521288629;
+
+// Marsaglia's xorshf96 generator: period 2^96-1
+unsigned int random_gen_fast(void)
+{
+    unsigned int t;
+    x ^= x << 16;
+    x ^= x >> 5;
+    x ^= x << 1;
+
+    t = x;
+    x = y;
+    y = z;
+    z = t ^ x ^ y;
+
+    return z;
+}
+
+float random_float_fast()
+{
+    return ((float)random_gen_fast() / (float)UINT_MAX);
+}
+
+int rand_int_fast(int min, int max)
+{
+    if (max < min) {
+        int s = min;
+        min = max;
+        max = s;
+    }
+    int r = (random_gen_fast() % (max - min + 1)) + min;
+    return r;
 }
 
 unsigned int random_gen()
@@ -798,17 +903,26 @@ unsigned int random_gen()
 
 float random_float()
 {
+    unsigned int rnd = 0;
 #ifdef WIN32
-    return ((float)random_gen() / (float)UINT_MAX);
-#else
-    return ((float)random_gen() / (float)RAND_MAX);
-#endif
+    rand_s(&rnd);
+    return ((float)rnd / (float)UINT_MAX);
+#else   // WIN32
+
+    rnd = rand();
+#if (RAND_MAX < 65536)
+    rnd = rand()*(RAND_MAX + 1) + rnd;
+    return((float)rnd / (float)(RAND_MAX*RAND_MAX));
+#endif  //(RAND_MAX < 65536)
+    return ((float)rnd / (float)RAND_MAX);
+
+#endif  // WIN32
 }
 
 float rand_uniform_strong(float min, float max)
 {
     if (max < min) {
-        const float swap = min;
+        float swap = min;
         min = max;
         max = swap;
     }
@@ -818,7 +932,7 @@ float rand_uniform_strong(float min, float max)
 float rand_precalc_random(float min, float max, float random_part)
 {
     if (max < min) {
-        const float swap = min;
+        float swap = min;
         min = max;
         max = swap;
     }
@@ -843,7 +957,8 @@ unsigned int uint_rand(unsigned int less_than)
 
 int check_array_is_nan(float *arr, int size)
 {
-    for (int i = 0; i < size; ++i) {
+    int i;
+    for (i = 0; i < size; ++i) {
         if (isnan(arr[i])) return 1;
     }
     return 0;
@@ -851,7 +966,8 @@ int check_array_is_nan(float *arr, int size)
 
 int check_array_is_inf(float *arr, int size)
 {
-    for (int i = 0; i < size; ++i) {
+    int i;
+    for (i = 0; i < size; ++i) {
         if (isinf(arr[i])) return 1;
     }
     return 0;
@@ -859,14 +975,14 @@ int check_array_is_inf(float *arr, int size)
 
 int *random_index_order(int min, int max)
 {
-    int *inds = (int *)calloc(max - min, sizeof(int));
+    int *inds = (int *)xcalloc(max - min, sizeof(int));
     int i;
     for (i = min; i < max; ++i) {
         inds[i - min] = i;
     }
     for (i = min; i < max - 1; ++i) {
-        const int swap = inds[i - min];
-        const int index = i + rand() % (max - i);
+        int swap = inds[i - min];
+        int index = i + rand() % (max - i);
         inds[i - min] = inds[index - min];
         inds[index - min] = swap;
     }
@@ -876,13 +992,42 @@ int *random_index_order(int min, int max)
 int max_int_index(int *a, int n)
 {
     if (n <= 0) return -1;
-    int max_i = 0;
+    int i, max_i = 0;
     int max = a[0];
-    for (int i = 1; i < n; ++i) {
+    for (i = 1; i < n; ++i) {
         if (a[i] > max) {
             max = a[i];
             max_i = i;
         }
     }
     return max_i;
+}
+
+
+// Absolute box from relative coordinate bounding box and image size
+boxabs box_to_boxabs(const box* b, const int img_w, const int img_h, const int bounds_check)
+{
+    boxabs ba;
+    ba.left = (b->x - b->w / 2.)*img_w;
+    ba.right = (b->x + b->w / 2.)*img_w;
+    ba.top = (b->y - b->h / 2.)*img_h;
+    ba.bot = (b->y + b->h / 2.)*img_h;
+
+    if (bounds_check) {
+        if (ba.left < 0) ba.left = 0;
+        if (ba.right > img_w - 1) ba.right = img_w - 1;
+        if (ba.top < 0) ba.top = 0;
+        if (ba.bot > img_h - 1) ba.bot = img_h - 1;
+    }
+
+    return ba;
+}
+
+int make_directory(char *path, int mode)
+{
+#ifdef WIN32
+    return _mkdir(path);
+#else
+    return mkdir(path, mode);
+#endif
 }
