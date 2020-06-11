@@ -147,8 +147,8 @@ void oneoff(char *cfgfile, char *weightfile, char *outfile)
 {
     gpu_index = -1;
     network net = parse_network_cfg(cfgfile);
-    const int oldn = net.layers[net.n - 2].n;
-    const int c = net.layers[net.n - 2].c;
+    int oldn = net.layers[net.n - 2].n;
+    int c = net.layers[net.n - 2].c;
     net.layers[net.n - 2].n = 9372;
     net.layers[net.n - 2].biases += 5;
     net.layers[net.n - 2].weights += 5*c;
@@ -159,7 +159,7 @@ void oneoff(char *cfgfile, char *weightfile, char *outfile)
     net.layers[net.n - 2].weights -= 5*c;
     net.layers[net.n - 2].n = oldn;
     printf("%d\n", oldn);
-    const layer l = net.layers[net.n - 2];
+    layer l = net.layers[net.n - 2];
     copy_cpu(l.n/3, l.biases, 1, l.biases +   l.n/3, 1);
     copy_cpu(l.n/3, l.biases, 1, l.biases + 2*l.n/3, 1);
     copy_cpu(l.n/3*l.c, l.weights, 1, l.weights +   l.n/3*l.c, 1);
@@ -189,8 +189,9 @@ void rescale_net(char *cfgfile, char *weightfile, char *outfile)
     if(weightfile){
         load_weights(&net, weightfile);
     }
-    for(int i = 0; i < net.n; ++i){
-        const layer l = net.layers[i];
+    int i;
+    for(i = 0; i < net.n; ++i){
+        layer l = net.layers[i];
         if(l.type == CONVOLUTIONAL){
             rescale_weights(l, 2, -.5);
             break;
@@ -206,8 +207,9 @@ void rgbgr_net(char *cfgfile, char *weightfile, char *outfile)
     if(weightfile){
         load_weights(&net, weightfile);
     }
-    for(int i = 0; i < net.n; ++i){
-        const layer l = net.layers[i];
+    int i;
+    for(i = 0; i < net.n; ++i){
+        layer l = net.layers[i];
         if(l.type == CONVOLUTIONAL){
             rgbgr_weights(l);
             break;
@@ -223,8 +225,9 @@ void reset_normalize_net(char *cfgfile, char *weightfile, char *outfile)
     if (weightfile) {
         load_weights(&net, weightfile);
     }
-    for (int i = 0; i < net.n; ++i) {
-        const layer l = net.layers[i];
+    int i;
+    for (i = 0; i < net.n; ++i) {
+        layer l = net.layers[i];
         if (l.type == CONVOLUTIONAL && l.batch_normalize) {
             denormalize_convolutional_layer(l);
         }
@@ -255,6 +258,7 @@ void reset_normalize_net(char *cfgfile, char *weightfile, char *outfile)
 
 layer normalize_layer(layer l, int n)
 {
+    int j;
     l.batch_normalize=1;
     l.scales = (float*)xcalloc(n, sizeof(float));
     for(j = 0; j < n; ++j){
@@ -272,8 +276,9 @@ void normalize_net(char *cfgfile, char *weightfile, char *outfile)
     if(weightfile){
         load_weights(&net, weightfile);
     }
-    for(int i = 0; i < net.n; ++i){
-        const layer l = net.layers[i];
+    int i;
+    for(i = 0; i < net.n; ++i){
+        layer l = net.layers[i];
         if(l.type == CONVOLUTIONAL && !l.batch_normalize){
             net.layers[i] = normalize_layer(l, l.n);
         }
@@ -311,8 +316,9 @@ void statistics_net(char *cfgfile, char *weightfile)
     if (weightfile) {
         load_weights(&net, weightfile);
     }
-    for (int i = 0; i < net.n; ++i) {
-        const layer l = net.layers[i];
+    int i;
+    for (i = 0; i < net.n; ++i) {
+        layer l = net.layers[i];
         if (l.type == CONNECTED && l.batch_normalize) {
             printf("Connected Layer %d\n", i);
             statistics_connected_layer(l);
@@ -362,8 +368,9 @@ void denormalize_net(char *cfgfile, char *weightfile, char *outfile)
     if (weightfile) {
         load_weights(&net, weightfile);
     }
-    for (int i = 0; i < net.n; ++i) {
-        const layer l = net.layers[i];
+    int i;
+    for (i = 0; i < net.n; ++i) {
+        layer l = net.layers[i];
         if (l.type == CONVOLUTIONAL && l.batch_normalize) {
             denormalize_convolutional_layer(l);
             net.layers[i].batch_normalize=0;
@@ -433,7 +440,8 @@ int main(int argc, char **argv)
     printf(" DEBUG=1 \n");
 #endif
 
-    for (int i = 0; i < argc; ++i) {
+	int i;
+	for (i = 0; i < argc; ++i) {
 		if (!argv[i]) continue;
 		strip_args(argv[i]);
 	}
@@ -484,8 +492,8 @@ int main(int argc, char **argv)
     } else if (0 == strcmp(argv[1], "detector")){
         run_detector(argc, argv);
     } else if (0 == strcmp(argv[1], "detect")){
-        const float thresh = find_float_arg(argc, argv, "-thresh", .24);
-        const int ext_output = find_arg(argc, argv, "-ext_output");
+        float thresh = find_float_arg(argc, argv, "-thresh", .24);
+		int ext_output = find_arg(argc, argv, "-ext_output");
         char *filename = (argc > 4) ? argv[4]: 0;
         test_detector("cfg/coco.data", argv[2], argv[3], filename, thresh, 0.5, 0, ext_output, 0, NULL, 0, 0);
     } else if (0 == strcmp(argv[1], "cifar")){

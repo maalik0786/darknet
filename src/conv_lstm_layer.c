@@ -17,7 +17,7 @@
 
 static void increment_layer(layer *l, int steps)
 {
-    const int num = l->outputs*l->batch*steps;
+    int num = l->outputs*l->batch*steps;
     l->output += num;
     l->delta += num;
     l->x += num;
@@ -284,10 +284,10 @@ void resize_conv_lstm_layer(layer *l, int w, int h)
     l->out_h = l->wo->out_h;
     l->out_w = l->wo->out_w;
     l->outputs = l->wo->outputs;
-    const int outputs = l->outputs;
+    int outputs = l->outputs;
     l->inputs = w*h*l->c;
-    const int steps = l->steps;
-    const int batch = l->batch;
+    int steps = l->steps;
+    int batch = l->batch;
 
     assert(l->wo->outputs == l->uo->outputs);
 

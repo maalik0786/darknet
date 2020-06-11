@@ -14,20 +14,20 @@
 extern "C" void forward_deconvolutional_layer_gpu(deconvolutional_layer layer, network_state state)
 {
     int i;
-    auto out_h = deconvolutional_out_height(layer);
-    auto out_w = deconvolutional_out_width(layer);
-    auto size = out_h*out_w;
+    int out_h = deconvolutional_out_height(layer);
+    int out_w = deconvolutional_out_width(layer);
+    int size = out_h*out_w;
 
-    auto m = layer.size*layer.size*layer.n;
-    auto n = layer.h*layer.w;
-    auto k = layer.c;
+    int m = layer.size*layer.size*layer.n;
+    int n = layer.h*layer.w;
+    int k = layer.c;
 
     fill_ongpu(layer.outputs*layer.batch, 0, layer.output_gpu, 1);
 
     for(i = 0; i < layer.batch; ++i){
-        auto a = layer.weights_gpu;
-        auto b = state.input + i*layer.c*layer.h*layer.w;
-        auto c = layer.col_image_gpu;
+        float *a = layer.weights_gpu;
+        float *b = state.input + i*layer.c*layer.h*layer.w;
+        float *c = layer.col_image_gpu;
 
         gemm_ongpu(1,0,m,n,k,1,a,m,b,n,0,c,n);
 
@@ -40,9 +40,9 @@ extern "C" void forward_deconvolutional_layer_gpu(deconvolutional_layer layer, n
 extern "C" void backward_deconvolutional_layer_gpu(deconvolutional_layer layer, network_state state)
 {
     float alpha = 1./layer.batch;
-    auto out_h = deconvolutional_out_height(layer);
-    auto out_w = deconvolutional_out_width(layer);
-    auto size = out_h*out_w;
+    int out_h = deconvolutional_out_height(layer);
+    int out_w = deconvolutional_out_width(layer);
+    int size = out_h*out_w;
     int i;
 
     gradient_array(layer.output_gpu, size*layer.n*layer.batch, layer.activation, layer.delta_gpu);
@@ -51,26 +51,26 @@ extern "C" void backward_deconvolutional_layer_gpu(deconvolutional_layer layer, 
     if(state.delta) memset(state.delta, 0, layer.batch*layer.h*layer.w*layer.c*sizeof(float));
 
     for(i = 0; i < layer.batch; ++i){
-        auto m = layer.c;
-        auto n = layer.size*layer.size*layer.n;
-        auto k = layer.h*layer.w;
+        int m = layer.c;
+        int n = layer.size*layer.size*layer.n;
+        int k = layer.h*layer.w;
 
-        auto a = state.input + i*m*n;
-        auto b = layer.col_image_gpu;
-        auto c = layer.weight_updates_gpu;
+        float *a = state.input + i*m*n;
+        float *b = layer.col_image_gpu;
+        float *c = layer.weight_updates_gpu;
 
         im2col_ongpu(layer.delta_gpu + i*layer.n*size, layer.n, out_h, out_w,
                 layer.size, layer.stride, 0, b);
         gemm_ongpu(0,1,m,n,k,alpha,a,k,b,k,1,c,n);
 
         if(state.delta){
-            auto m = layer.c;
-            auto n = layer.h*layer.w;
-            auto k = layer.size*layer.size*layer.n;
+            int m = layer.c;
+            int n = layer.h*layer.w;
+            int k = layer.size*layer.size*layer.n;
 
-            auto a = layer.weights_gpu;
-            auto b = layer.col_image_gpu;
-            auto c = state.delta + i*n*m;
+            float *a = layer.weights_gpu;
+            float *b = layer.col_image_gpu;
+            float *c = state.delta + i*n*m;
 
             gemm(0,0,m,n,k,1,a,k,b,n,1,c,n);
         }
@@ -95,7 +95,7 @@ extern "C" void push_deconvolutional_layer(deconvolutional_layer layer)
 
 extern "C" void update_deconvolutional_layer_gpu(deconvolutional_layer layer, int skip, float learning_rate, float momentum, float decay)
 {
-    const auto size = layer.size*layer.size*layer.c*layer.n;
+    int size = layer.size*layer.size*layer.c*layer.n;
 
     axpy_ongpu(layer.n, learning_rate, layer.bias_updates_gpu, 1, layer.biases_gpu, 1);
     scal_ongpu(layer.n, momentum, layer.bias_updates_gpu, 1);

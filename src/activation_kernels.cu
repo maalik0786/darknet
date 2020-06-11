@@ -51,7 +51,7 @@ __device__ float plse_activate_kernel(float x)
 }
 __device__ float stair_activate_kernel(float x)
 {
-    const int n = floorf(x);
+    int n = floorf(x);
     if (n%2 == 0) return floorf(x/2.f);
     else return (x - n) + floorf(x/2.f);
 }
@@ -66,7 +66,7 @@ __device__ float linear_gradient_kernel(float x){return 1;}
 __device__ float logistic_gradient_kernel(float x){return (1-x)*x;}
 __device__ float loggy_gradient_kernel(float x)
 {
-    const auto y = (x+1.F)/2.F;
+    float y = (x+1.F)/2.F;
     return 2*(1-y)*y;
 }
 __device__ float relu_gradient_kernel(float x){return (x>0);}
@@ -437,7 +437,7 @@ __global__ void gradient_array_relu6_kernel(float *x, int n, float *delta)
 
 extern "C" void activate_array_ongpu(float *x, int n, ACTIVATION a)
 {
-    const auto num_blocks = get_number_of_blocks(n, BLOCK);
+    const int num_blocks = get_number_of_blocks(n, BLOCK);
     if (a == LINEAR) return;
     else if(a == LEAKY) activate_array_leaky_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(x, n);
     else if (a == LOGISTIC) activate_array_logistic_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(x, n);
@@ -454,7 +454,7 @@ extern "C" void activate_array_ongpu(float *x, int n, ACTIVATION a)
 
 extern "C" void activate_array_swish_ongpu(float *x, int n, float *output_sigmoid_gpu, float *output_gpu)
 {
-    const auto num_blocks = get_number_of_blocks(n, BLOCK);
+    const int num_blocks = get_number_of_blocks(n, BLOCK);
     activate_array_swish_kernel << <cuda_gridsize(n), BLOCK, 0, get_cuda_stream() >> >(x, n, output_sigmoid_gpu, output_gpu);
     CHECK_CUDA(cudaPeekAtLastError());
 }
@@ -468,7 +468,7 @@ extern "C" void activate_array_mish_ongpu(float *x, int n, float *activation_inp
 
 extern "C" void gradient_array_ongpu(float *x, int n, ACTIVATION a, float *delta)
 {
-    const auto num_blocks = get_number_of_blocks(n, BLOCK);
+    const int num_blocks = get_number_of_blocks(n, BLOCK);
     if (a == LINEAR) return;
     else if (a == LEAKY) gradient_array_leaky_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(x, n, delta);
     else if (a == LOGISTIC) gradient_array_logistic_kernel << <num_blocks, BLOCK, 0, get_cuda_stream() >> >(x, n, delta);
@@ -491,7 +491,7 @@ extern "C" void gradient_array_ongpu(float *x, int n, ACTIVATION a, float *delta
 
 extern "C" void gradient_array_swish_ongpu(float *x, int n, float *sigmoid_gpu, float *delta)
 {
-    const auto num_blocks = get_number_of_blocks(n, BLOCK);
+    const int num_blocks = get_number_of_blocks(n, BLOCK);
     gradient_array_swish_kernel << <cuda_gridsize(n), BLOCK, 0, get_cuda_stream() >> > (x, n, sigmoid_gpu, delta);
     CHECK_CUDA(cudaPeekAtLastError());
 }

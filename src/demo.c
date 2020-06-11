@@ -172,7 +172,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
         error("Couldn't connect to webcam.\n");
     }
 
-    const layer l = net.layers[net.n-1];
+    layer l = net.layers[net.n-1];
     int j;
 
     cv_images = (mat_cv**)xcalloc(avg_frames, sizeof(mat_cv));
@@ -215,7 +215,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     int count = 0;
     if(!prefix && !dont_show){
-        const int full_screen = 0;
+        int full_screen = 0;
         create_window_cv("Demo", full_screen, 1352, 1013);
     }
 
@@ -269,7 +269,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
             ++frame_id;
             if (demo_json_port > 0) {
-                const int timeout = 400000;
+                int timeout = 400000;
                 send_json(local_dets, local_nboxes, l.classes, demo_names, frame_id, demo_json_port, timeout);
             }
 
@@ -313,9 +313,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
             // if you run it with param -mjpeg_port 8090  then open URL in your web-browser: http://localhost:8090
             if (mjpeg_port > 0 && show_img) {
-                const int port = mjpeg_port;
-                const int timeout = 400000;
-                const int jpeg_quality = 40;    // 1 - 100
+                int port = mjpeg_port;
+                int timeout = 400000;
+                int jpeg_quality = 40;    // 1 - 100
                 send_mjpeg(show_img, port, timeout, jpeg_quality);
             }
 
@@ -398,7 +398,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 
     const int nsize = 8;
     for (j = 0; j < nsize; ++j) {
-        for (int i = 32; i < 127; ++i) {
+        for (i = 32; i < 127; ++i) {
             free_image(alphabet[j][i]);
         }
         free(alphabet[j]);

@@ -39,8 +39,8 @@ void swap_binary(convolutional_layer *l)
 
 void binarize_weights(float *weights, int n, int size, float *binary)
 {
-    int i;
-    for(int f = 0; f < n; ++f){
+    int i, f;
+    for(f = 0; f < n; ++f){
         float mean = 0;
         for(i = 0; i < size; ++i){
             mean += fabs(weights[f*size + i]);
@@ -54,15 +54,16 @@ void binarize_weights(float *weights, int n, int size, float *binary)
 
 void binarize_cpu(float *input, int n, float *binary)
 {
-    for(int i = 0; i < n; ++i){
+    int i;
+    for(i = 0; i < n; ++i){
         binary[i] = (input[i] > 0) ? 1 : -1;
     }
 }
 
 void binarize_input(float *input, int n, int size, float *binary)
 {
-    int i;
-    for(int s = 0; s < size; ++s){
+    int i, s;
+    for(s = 0; s < size; ++s){
         float mean = 0;
         for(i = 0; i < n; ++i){
             mean += fabs(input[i*size + s]);
@@ -86,17 +87,19 @@ int convolutional_out_width(convolutional_layer l)
 
 image get_convolutional_image(convolutional_layer l)
 {
-    int h = convolutional_out_height(l);
-    int w = convolutional_out_width(l);
-    int c = l.n;
+    int h,w,c;
+    h = convolutional_out_height(l);
+    w = convolutional_out_width(l);
+    c = l.n;
     return float_to_image(w,h,c,l.output);
 }
 
 image get_convolutional_delta(convolutional_layer l)
 {
-    int h = convolutional_out_height(l);
-    int w = convolutional_out_width(l);
-    int c = l.n;
+    int h,w,c;
+    h = convolutional_out_height(l);
+    w = convolutional_out_width(l);
+    c = l.n;
     return float_to_image(w,h,c,l.delta);
 }
 
@@ -323,20 +326,17 @@ void cudnn_convolutional_setup(layer *l, int cudnn_preference, size_t workspace_
             workspace_size_specify,
             &l->bf_algo));
 
-    //if (data_type == CUDNN_DATA_HALF || data_type == CUDNN_DATA_FLOAT)
+    //if (data_type == CUDNN_DATA_HALF)
     {
-        //if (data_type == CUDNN_DATA_HALF) {
-            l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
-            l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
-            l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
-        //}
+        // HALF-16 if(data_type == CUDNN_DATA_HALF)
+        l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
+        l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
+        l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1;
 
-        // FLOAT-32
-       /* if (data_type == CUDNN_DATA_FLOAT) {
-            l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED;
-            l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED;
-            l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED;
-        }*/
+        // FLOAT-32 if(data_type == CUDNN_DATA_FLOAT)
+        //l->fw_algo16 = CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED;
+        //l->bd_algo16 = CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED;
+        //l->bf_algo16 = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED;
     }
 }
 #endif
@@ -435,7 +435,7 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
             l.bias_updates = (float*)xcalloc(n, sizeof(float));
         }
     }
-    /* this function takes >1sec to run.
+
     // float scale = 1./sqrt(size*size*c);
     float scale = sqrt(2./(size*size*c/groups));
     if (l.activation == NORM_CHAN || l.activation == NORM_CHAN_SOFTMAX || l.activation == NORM_CHAN_SOFTMAX_MAXVAL) {
@@ -539,6 +539,7 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
     }
 
 #ifdef GPU
+
 
     l.forward_gpu = forward_convolutional_layer_gpu;
     l.backward_gpu = backward_convolutional_layer_gpu;
@@ -715,9 +716,10 @@ convolutional_layer make_convolutional_layer(int batch, int steps, int h, int w,
 
 void denormalize_convolutional_layer(convolutional_layer l)
 {
-    for(int i = 0; i < l.n; ++i){
+    int i, j;
+    for(i = 0; i < l.n; ++i){
         float scale = l.scales[i]/sqrt(l.rolling_variance[i] + .00001);
-        for(int j = 0; j < l.nweights; ++j){
+        for(j = 0; j < l.nweights; ++j){
             l.weights[i*l.nweights + j] *= scale;
         }
         l.biases[i] -= l.rolling_mean[i] * scale;
@@ -856,9 +858,10 @@ void set_specified_workspace_limit(convolutional_layer *l, size_t workspace_size
 
 void add_bias(float *output, float *biases, int batch, int n, int size)
 {
-    for(int b = 0; b < batch; ++b){
-        for(int i = 0; i < n; ++i){
-            for(int j = 0; j < size; ++j){
+    int i,j,b;
+    for(b = 0; b < batch; ++b){
+        for(i = 0; i < n; ++i){
+            for(j = 0; j < size; ++j){
                 output[(b*n + i)*size + j] += biases[i];
             }
         }
@@ -867,9 +870,10 @@ void add_bias(float *output, float *biases, int batch, int n, int size)
 
 void scale_bias(float *output, float *scales, int batch, int n, int size)
 {
-    for(int b = 0; b < batch; ++b){
-        for(int i = 0; i < n; ++i){
-            for(int j = 0; j < size; ++j){
+    int i,j,b;
+    for(b = 0; b < batch; ++b){
+        for(i = 0; i < n; ++i){
+            for(j = 0; j < size; ++j){
                 output[(b*n + i)*size + j] *= scales[i];
             }
         }
@@ -878,8 +882,9 @@ void scale_bias(float *output, float *scales, int batch, int n, int size)
 
 void backward_bias(float *bias_updates, float *delta, int batch, int n, int size)
 {
-    for(int b = 0; b < batch; ++b){
-        for(int i = 0; i < n; ++i){
+    int i,b;
+    for(b = 0; b < batch; ++b){
+        for(i = 0; i < n; ++i){
             bias_updates[i] += sum_array(delta+size*(i+b*n), size);
         }
     }
@@ -890,11 +895,12 @@ void gemm_nn_custom(int M, int N, int K, float ALPHA,
     float *B, int ldb,
     float *C, int ldc)
 {
-    for (int i = 0; i < M; ++i) {
-        for (int k = 0; k < K; ++k) {
+    int i, j, k;
+    for (i = 0; i < M; ++i) {
+        for (k = 0; k < K; ++k) {
             PUT_IN_REGISTER float A_PART = ALPHA * A[i * lda + k];
             //printf("\n weight = %f \n", A_PART);
-            for (int j = 0; j < N; ++j) {
+            for (j = 0; j < N; ++j) {
                 C[i*ldc + j] += A_PART*B[k*ldb + j];
             }
         }
@@ -903,8 +909,9 @@ void gemm_nn_custom(int M, int N, int K, float ALPHA,
 
 
 void get_mean_array(float *src, size_t size, size_t filters, float *mean_arr) {
-    size_t counter = 0;
-    for (size_t i = 0; i < size; i += size / filters) {
+    size_t i, counter;
+    counter = 0;
+    for (i = 0; i < size; i += size / filters) {
         mean_arr[counter++] = fabs(src[i]);
     }
 }
@@ -921,11 +928,11 @@ void float_to_bit(float *src, unsigned char *dst, size_t size) {
 }
 */
 
-
 void bit_to_float(unsigned char *src, float *dst, size_t size, size_t filters, float *mean_arr) {
     memset(dst, 0, size *sizeof(float));
+    size_t i;
 
-    for (size_t i = 0; i < size; ++i) {
+    for (i = 0; i < size; ++i) {
         float mean_val = 1;
         if(mean_arr != NULL) mean_val = fabs(mean_arr[i / (size / filters)]);
         if(get_bit(src, i)) dst[i] = mean_val;
@@ -947,10 +954,10 @@ void binary_align_weights(convolutional_layer *l)
     float* align_weights = (float*)xcalloc(align_weights_size, sizeof(float));
     l->align_bit_weights = (char*)xcalloc(l->align_bit_weights_size, sizeof(char));
 
-    size_t i;
+    size_t i, j;
     // align A without transpose
     for (i = 0; i < m; ++i) {
-        for (size_t j = 0; j < k; ++j) {
+        for (j = 0; j < k; ++j) {
             align_weights[i*new_lda + j] = l->binary_weights[i*k + j];
         }
     }
@@ -960,16 +967,19 @@ void binary_align_weights(convolutional_layer *l)
     //if(gpu_index < 0 && l->stride == 1 && l->pad == 1 && l->c % 32 == 0)
     //if (l->stride == 1 && l->pad == 1 && l->c % 32 == 0)
     {
+        int fil, chan;
         const int items_per_filter = l->c * l->size * l->size;
         //const int dst_items_per_filter = new_lda;
-        for (int fil = 0; fil < l->n; ++fil)
+        for (fil = 0; fil < l->n; ++fil)
         {
-            for (int chan = 0; chan < l->c; chan += 32)
+            for (chan = 0; chan < l->c; chan += 32)
             {
                 const int items_per_channel = l->size*l->size;
                 for (i = 0; i < items_per_channel; ++i)
                 {
-                    for (int c_pack = 0; c_pack < 32; ++c_pack) {
+                    //uint32_t val = 0;
+                    int c_pack;
+                    for (c_pack = 0; c_pack < 32; ++c_pack) {
                         float src = l->binary_weights[fil*items_per_filter + (chan + c_pack)*items_per_channel + i];
 
                         //align_weights[fil*items_per_filter + chan*items_per_channel + i * 32 + c_pack] = src;
@@ -1016,8 +1026,9 @@ void binary_align_weights(convolutional_layer *l)
 
 
 #ifdef GPU
+    cudaError_t status;
     l->align_workspace_size = l->bit_align * l->size * l->size * l->c;
-    cudaError_t status = cudaMalloc((void**)&l->align_workspace_gpu, l->align_workspace_size * sizeof(float));
+    status = cudaMalloc((void **)&l->align_workspace_gpu, l->align_workspace_size * sizeof(float));
     status = cudaMalloc((void **)&l->transposed_align_workspace_gpu, l->align_workspace_size * sizeof(float));
     CHECK_CUDA(status);
 
@@ -1483,7 +1494,8 @@ image get_convolutional_weight(convolutional_layer l, int i)
 
 void rgbgr_weights(convolutional_layer l)
 {
-    for (int i = 0; i < l.n; ++i) {
+    int i;
+    for (i = 0; i < l.n; ++i) {
         image im = get_convolutional_weight(l, i);
         if (im.c == 3) {
             rgbgr_image(im);
@@ -1493,7 +1505,8 @@ void rgbgr_weights(convolutional_layer l)
 
 void rescale_weights(convolutional_layer l, float scale, float trans)
 {
-    for (int i = 0; i < l.n; ++i) {
+    int i;
+    for (i = 0; i < l.n; ++i) {
         image im = get_convolutional_weight(l, i);
         if (im.c == 3) {
             scale_image(im, scale);

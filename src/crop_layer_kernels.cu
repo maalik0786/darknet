@@ -15,15 +15,15 @@ __device__ float get_pixel_kernel(float *image, int w, int h, int x, int y, int 
 
 __device__ float3 rgb_to_hsv_kernel(float3 rgb)
 {
-    auto r = rgb.x;
-    auto g = rgb.y;
-    auto b = rgb.z;
+    float r = rgb.x;
+    float g = rgb.y;
+    float b = rgb.z;
 
-    float h, s;
-    const auto max = (r > g) ? ( (r > b) ? r : b) : ( (g > b) ? g : b);
-    const auto min = (r < g) ? ( (r < b) ? r : b) : ( (g < b) ? g : b);
-    const auto delta = max - min;
-    float v = max;
+    float h, s, v;
+    float max = (r > g) ? ( (r > b) ? r : b) : ( (g > b) ? g : b);
+    float min = (r < g) ? ( (r < b) ? r : b) : ( (g < b) ? g : b);
+    float delta = max - min;
+    v = max;
     if(max == 0){
         s = 0;
         h = -1;
@@ -43,20 +43,21 @@ __device__ float3 rgb_to_hsv_kernel(float3 rgb)
 
 __device__ float3 hsv_to_rgb_kernel(float3 hsv)
 {
-    const auto h = hsv.x;
-    const auto s = hsv.y;
-    const auto v = hsv.z;
+    float h = hsv.x;
+    float s = hsv.y;
+    float v = hsv.z;
 
     float r, g, b;
+    float f, p, q, t;
 
     if (s == 0) {
         r = g = b = v;
     } else {
-        const auto index = (int) floorf(h);
-        float f = h - index;
-        float p = v * (1 - s);
-        float q = v * (1 - s * f);
-        float t = v * (1 - s * (1 - f));
+        int index = (int) floorf(h);
+        f = h - index;
+        p = v*(1-s);
+        q = v*(1-s*f);
+        t = v*(1-s*(1-f));
         if(index == 0){
             r = v; g = t; b = p;
         } else if(index == 1){
@@ -79,13 +80,13 @@ __device__ float3 hsv_to_rgb_kernel(float3 hsv)
 
 __device__ float bilinear_interpolate_kernel(float *image, int w, int h, float x, float y, int c)
 {
-    const auto ix = (int) floorf(x);
-    const auto iy = (int) floorf(y);
+    int ix = (int) floorf(x);
+    int iy = (int) floorf(y);
 
-    const auto dx = x - ix;
-    const auto dy = y - iy;
+    float dx = x - ix;
+    float dy = y - iy;
 
-    const auto val = (1-dy) * (1-dx) * get_pixel_kernel(image, w, h, ix, iy, c) +
+    float val = (1-dy) * (1-dx) * get_pixel_kernel(image, w, h, ix, iy, c) +
         dy     * (1-dx) * get_pixel_kernel(image, w, h, ix, iy+1, c) +
         (1-dy) *   dx   * get_pixel_kernel(image, w, h, ix+1, iy, c) +
         dy     *   dx   * get_pixel_kernel(image, w, h, ix+1, iy+1, c);
@@ -94,16 +95,16 @@ __device__ float bilinear_interpolate_kernel(float *image, int w, int h, float x
 
 __global__ void levels_image_kernel(float *image, float *rand, int batch, int w, int h, int train, float saturation, float exposure, float translate, float scale, float shift)
 {
-    auto size = batch * w * h;
+    int size = batch * w * h;
     int id = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
     if(id >= size) return;
     int x = id % w;
     id /= w;
     int y = id % h;
     id /= h;
-    const auto rshift = rand[0];
-    const auto gshift = rand[1];
-    const auto bshift = rand[2];
+    float rshift = rand[0];
+    float gshift = rand[1];
+    float bshift = rand[2];
     float r0 = rand[8*id + 0];
     float r1 = rand[8*id + 1];
     float r2 = rand[8*id + 2];
@@ -116,9 +117,9 @@ __global__ void levels_image_kernel(float *image, float *rand, int batch, int w,
 
     size_t offset = id * h * w * 3;
     image += offset;
-    const float r = image[x + w*(y + h*0)];
-    const float g = image[x + w*(y + h*1)];
-    const float b = image[x + w*(y + h*2)];
+    float r = image[x + w*(y + h*0)];
+    float g = image[x + w*(y + h*1)];
+    float b = image[x + w*(y + h*2)];
     float3 rgb = make_float3(r,g,b);
     if(train){
         float3 hsv = rgb_to_hsv_kernel(rgb);
@@ -146,7 +147,7 @@ __global__ void forward_crop_layer_kernel(float *input, float *rand, int size, i
     id /= crop_width;
     int i = id % crop_height;
     id /= crop_height;
-    const int k = id % c;
+    int k = id % c;
     id /= c;
     int b = id;
 
@@ -171,8 +172,8 @@ __global__ void forward_crop_layer_kernel(float *input, float *rand, int size, i
     float x = (flip) ? w - dw - j - 1 : j + dw;
     float y = i + dh;
 
-    const float rx = cos(angle)*(x-cx) - sin(angle)*(y-cy) + cx;
-    const float ry = sin(angle)*(x-cx) + cos(angle)*(y-cy) + cy;
+    float rx = cos(angle)*(x-cx) - sin(angle)*(y-cy) + cx;
+    float ry = sin(angle)*(x-cx) + cos(angle)*(y-cy) + cy;
 
     output[count] = bilinear_interpolate_kernel(input, w, h, rx, ry, k);
 }
@@ -190,7 +191,7 @@ extern "C" void forward_crop_layer_gpu(crop_layer layer, network_state state)
         translate = 0;
     }
 
-    auto size = layer.batch * layer.w * layer.h;
+    int size = layer.batch * layer.w * layer.h;
 
     levels_image_kernel<<<cuda_gridsize(size), BLOCK, 0, get_cuda_stream() >>>(state.input, layer.rand_gpu, layer.batch, layer.w, layer.h, state.train, layer.saturation, layer.exposure, translate, scale, layer.shift);
     CHECK_CUDA(cudaPeekAtLastError());

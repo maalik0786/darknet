@@ -12,7 +12,7 @@
 
 static void increment_layer(layer *l, int steps)
 {
-    const int num = l->outputs*l->batch*steps;
+    int num = l->outputs*l->batch*steps;
     l->output += num;
     l->delta += num;
     l->x += num;

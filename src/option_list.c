@@ -57,7 +57,7 @@ metadata get_metadata(char *file)
 int read_option(char *s, list *options)
 {
     size_t i;
-    const size_t len = strlen(s);
+    size_t len = strlen(s);
     char *val = 0;
     for(i = 0; i < len; ++i){
         if(s[i] == '='){

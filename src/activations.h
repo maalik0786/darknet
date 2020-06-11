@@ -43,7 +43,7 @@ void gradient_array_normalize_channels_softmax_ongpu(float *output_gpu, int n, i
 
 static inline float stair_activate(float x)
 {
-    const int n = floorf(x);
+    int n = floorf(x);
     if (n%2 == 0) return floorf(x/2.f);
     else return (x - n) + floorf(x/2.f);
 }
@@ -99,7 +99,7 @@ static inline float linear_gradient(float x){return 1;}
 static inline float logistic_gradient(float x){return (1-x)*x;}
 static inline float loggy_gradient(float x)
 {
-    const float y = (x+1.f)/2.f;
+    float y = (x+1.f)/2.f;
     return 2*(1-y)*y;
 }
 static inline float stair_gradient(float x)

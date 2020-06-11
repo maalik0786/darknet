@@ -166,18 +166,18 @@ void extract_cifar()
 {
 char *labels[] = {"airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"};
     int i;
-const data train = load_all_cifar10();
-const data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    data train = load_all_cifar10();
+    data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
     for(i = 0; i < train.X.rows; ++i){
-        const image im = float_to_image(32, 32, 3, train.X.vals[i]);
-        const int class_id = max_index(train.y.vals[i], 10);
+        image im = float_to_image(32, 32, 3, train.X.vals[i]);
+        int class_id = max_index(train.y.vals[i], 10);
         char buff[256];
         sprintf(buff, "data/cifar/train/%d_%s",i,labels[class_id]);
         save_image_png(im, buff);
     }
     for(i = 0; i < test.X.rows; ++i){
-        const image im = float_to_image(32, 32, 3, test.X.vals[i]);
-        const int class_id = max_index(test.y.vals[i], 10);
+        image im = float_to_image(32, 32, 3, test.X.vals[i]);
+        int class_id = max_index(test.y.vals[i], 10);
         char buff[256];
         sprintf(buff, "data/cifar/test/%d_%s",i,labels[class_id]);
         save_image_png(im, buff);
@@ -240,9 +240,9 @@ void test_cifar_csvtrain(char *filename, char *weightfile)
 
 void eval_cifar_csv()
 {
-    const data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
+    data test = load_cifar10_data("data/cifar/cifar-10-batches-bin/test_batch.bin");
 
-    const matrix pred = csv_to_matrix("results/combined.csv");
+    matrix pred = csv_to_matrix("results/combined.csv");
     fprintf(stderr, "%d %d\n", pred.rows, pred.cols);
 
     fprintf(stderr, "Accuracy: %f\n", matrix_topk_accuracy(test.y, pred, 1));

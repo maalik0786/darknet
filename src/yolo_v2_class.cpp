@@ -206,7 +206,7 @@ Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cu
     char *cfgfile = const_cast<char *>(_cfg_filename.c_str());
     char *weightfile = const_cast<char *>(_weight_filename.c_str());
 
-    net = parse_network_cfg_custom(cfgfile, 1, 1);
+    auto net = parse_network_cfg_custom(cfgfile, 1, 1);
     if (weightfile) {
         load_weights(&net, weightfile);
     }

@@ -8,11 +8,12 @@ void change_leaves(tree *t, char *leaf_list)
 {
     list *llist = get_paths(leaf_list);
     char **leaves = (char **)list_to_array(llist);
-    const int n = llist->size;
+    int n = llist->size;
+    int i,j;
     int found = 0;
-    for(int i = 0; i < t->n; ++i){
+    for(i = 0; i < t->n; ++i){
         t->leaf[i] = 0;
-        for(int j = 0; j < n; ++j){
+        for(j = 0; j < n; ++j){
             if (0==strcmp(t->name[i], leaves[j])){
                 t->leaf[i] = 1;
                 ++found;
@@ -37,7 +38,7 @@ void hierarchy_predictions(float *predictions, int n, tree *hier, int only_leave
 {
     int j;
     for(j = 0; j < n; ++j){
-        const int parent = hier->parent[j];
+        int parent = hier->parent[j];
         if(parent >= 0){
             predictions[j] *= predictions[parent];
         }
@@ -53,13 +54,14 @@ int hierarchy_top_prediction(float *predictions, tree *hier, float thresh, int s
 {
     float p = 1;
     int group = 0;
+    int i;
     while (1) {
         float max = 0;
         int max_i = 0;
 
-        for (int i = 0; i < hier->group_size[group]; ++i) {
-            const int index = i + hier->group_offset[group];
-            const float val = predictions[(i + hier->group_offset[group])*stride];
+        for (i = 0; i < hier->group_size[group]; ++i) {
+            int index = i + hier->group_offset[group];
+            float val = predictions[(i + hier->group_offset[group])*stride];
             if (val > max) {
                 max_i = index;
                 max = val;

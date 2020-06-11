@@ -96,8 +96,8 @@ void backward_sam_layer(const layer l, network_state state)
 #ifdef GPU
 void forward_sam_layer_gpu(const layer l, network_state state)
 {
-    const int size = l.batch * l.out_c * l.out_w * l.out_h;
-    const int channel_size = 1;
+    int size = l.batch * l.out_c * l.out_w * l.out_h;
+    int channel_size = 1;
 
     sam_gpu(state.net.layers[l.index].output_gpu, size, channel_size, state.input, l.output_gpu);
 

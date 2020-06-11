@@ -39,7 +39,9 @@ warnx(const char* fmt, ...)
 static int
 gcd(int a, int b)
 {
-    int c = a % b;
+  int c;
+
+  c = a % b;
   while (c != 0) {
     a = b;
     b = c;
@@ -58,23 +60,26 @@ static void
 permute_args(int panonopt_start, int panonopt_end, int opt_end,
     char* const* nargv)
 {
-    /*
+  int cstart, cyclelen, i, j, ncycle, nnonopts, nopts, pos;
+  char* swap;
+
+  /*
 	 * compute lengths of blocks and number and size of cycles
 	 */
-  int nnonopts = panonopt_end - panonopt_start;
-  int nopts = opt_end - panonopt_end;
-  int ncycle = gcd(nnonopts, nopts);
-  int cyclelen = (opt_end - panonopt_start) / ncycle;
+  nnonopts = panonopt_end - panonopt_start;
+  nopts = opt_end - panonopt_end;
+  ncycle = gcd(nnonopts, nopts);
+  cyclelen = (opt_end - panonopt_start) / ncycle;
 
-  for (int i = 0; i < ncycle; i++) {
-    int cstart = panonopt_end + i;
-    int pos = cstart;
-    for (int j = 0; j < cyclelen; j++) {
+  for (i = 0; i < ncycle; i++) {
+    cstart = panonopt_end + i;
+    pos = cstart;
+    for (j = 0; j < cyclelen; j++) {
       if (pos >= panonopt_end)
         pos -= nnonopts;
       else
         pos += nopts;
-      char* swap = nargv[pos];
+      swap = nargv[pos];
       /* LINTED const cast */
       ((char**)nargv)[pos] = nargv[cstart];
       /* LINTED const cast */
@@ -148,15 +153,16 @@ static int
 parse_long_options(char* const* nargv, const char* options,
     const struct option* long_options, int* idx, int short_too)
 {
-  char*has_equal;
+  char *current_argv, *has_equal;
   size_t current_argv_len;
+  int i, ambiguous, match;
 
 #define IDENTICAL_INTERPRETATION(_x, _y) \
   (long_options[(_x)].has_arg == long_options[(_y)].has_arg && long_options[(_x)].flag == long_options[(_y)].flag && long_options[(_x)].val == long_options[(_y)].val)
 
-  char* current_argv = place;
-  int match = -1;
-  int ambiguous = 0;
+  current_argv = place;
+  match = -1;
+  ambiguous = 0;
 
   optind++;
 
@@ -167,7 +173,7 @@ parse_long_options(char* const* nargv, const char* options,
   } else
     current_argv_len = strlen(current_argv);
 
-  for (int i = 0; long_options[i].name; i++) {
+  for (i = 0; long_options[i].name; i++) {
     /* find matching long option */
     if (strncmp(current_argv, long_options[i].name,
             current_argv_len))
@@ -272,7 +278,7 @@ getopt_internal(int nargc, char* const* nargv, const char* options,
     const struct option* long_options, int* idx, int flags)
 {
   char* oli; /* option letter list index */
-  int optchar;
+  int optchar, short_too;
   static int posixly_correct = -1;
 
   if (options == NULL)
@@ -384,7 +390,7 @@ start:
 	 *  3) either the arg starts with -- we are getopt_long_only()
 	 */
   if (long_options != NULL && place != nargv[optind] && (*place == '-' || (flags & FLAG_LONGONLY))) {
-    int short_too = 0;
+    short_too = 0;
     if (*place == '-')
       place++; /* --foo long option */
     else if (*place != ':' && strchr(options, *place) != NULL)

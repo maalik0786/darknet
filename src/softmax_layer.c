@@ -14,10 +14,12 @@
 
 void softmax_tree(float *input, int batch, int inputs, float temp, tree *hierarchy, float *output)
 {
-    for (int b = 0; b < batch; ++b) {
-        int count = 0;
-		for (int i = 0; i < hierarchy->groups; ++i) {
-            const int group_size = hierarchy->group_size[i];
+	int b;
+	for (b = 0; b < batch; ++b) {
+		int i;
+		int count = 0;
+		for (i = 0; i < hierarchy->groups; ++i) {
+			int group_size = hierarchy->group_size[i];
 			softmax(input + b*inputs + count, group_size, temp, output + b*inputs + count, 1);
 			count += group_size;
 		}

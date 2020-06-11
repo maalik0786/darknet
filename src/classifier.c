@@ -1332,14 +1332,14 @@ void run_classifier(int argc, char **argv)
         return;
     }
 
-    const int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
+    int mjpeg_port = find_int_arg(argc, argv, "-mjpeg_port", -1);
     char *gpu_list = find_char_arg(argc, argv, "-gpus", 0);
     int *gpus = 0;
     int gpu = 0;
     int ngpus = 0;
     if(gpu_list){
         printf("%s\n", gpu_list);
-        const int len = strlen(gpu_list);
+        int len = strlen(gpu_list);
         ngpus = 1;
         int i;
         for(i = 0; i < len; ++i){
