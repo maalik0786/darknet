@@ -197,46 +197,38 @@ struct detector_gpu_t
 LIB_API Detector::
 Detector(std::string cfg_filename, std::string weight_filename, int gpu_id) : cur_gpu_id(gpu_id), wait_stream(false)
 {
+        wait_stream = 0;
+#ifdef GPU
+    int old_gpu_index;
+    check_cuda( cudaGetDevice(&old_gpu_index) );
+#endif
     detector_gpu_ptr = std::make_shared<detector_gpu_t>();
-    auto& detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
+    auto &detector_gpu = *static_cast<detector_gpu_t *>(detector_gpu_ptr.get());
 
-    _cfg_filename = cfg_filename;
-    _weight_filename = weight_filename;
+#ifdef GPU
+    check_cuda( cudaSetDevice(cur_gpu_id) );
+    cuda_set_device(cur_gpu_id);
+    //printf(" Used GPU %d \n", cur_gpu_id);
+#endif
 
-    char *cfgfile = const_cast<char *>(_cfg_filename.c_str());
-    char *weightfile = const_cast<char *>(_weight_filename.c_str());
-
-    auto net = parse_network_cfg_custom(cfgfile, 1, 1);
-    if (weightfile) {
-        load_weights(&net, weightfile);
-    }
-    set_batch_network(&net, 1);
+    network &net = detector_gpu.net;
     net.gpu_index = cur_gpu_id;
 
-    const auto cfg_file = const_cast<char *>(cfg_filename.data());
-    const auto weight_file = const_cast<char *>(weight_filename.data());
+    char *cfg_file = const_cast<char *>(cfg_filename.c_str());
+    char *weight_file = const_cast<char *>(weight_filename.c_str());
 
     net = parse_network_cfg_custom(cfg_file, 1, 0); //slow 1-2s
     load_weights(&net, weight_file); //fast <100ms
-    /*
-      set_batch_network(&net, 1);
-      net.gpu_index = cur_gpu_id;
-      fuse_conv_batchnorm(net);
-     */
+
     const auto l = net.layers[net.n - 1];
-    /*
-    detector_gpu.avg = static_cast<float *>(calloc(l.outputs, sizeof(float)));
-
-    for (int j = 0; j < NFRAMES; ++j)
-        detector_gpu.predictions[j] = static_cast<float*>(calloc(l.outputs, sizeof(float)));
-
-    for (int j = 0; j < NFRAMES; ++j) detector_gpu.images[j] = make_image(1, 1, 3);
-    */
 
     detector_gpu.track_id = static_cast<unsigned int *>(calloc(l.classes, sizeof(unsigned int)));
     for (auto j = 0; j < l.classes; j++)
         detector_gpu.track_id[j] = 1;
-    detector_gpu.demo_index = 1;
+    //detector_gpu.demo_index = 1;
+#ifdef GPU
+    check_cuda( cudaSetDevice(old_gpu_index) );
+#endif
 }
 
 LIB_API Detector::~Detector()
@@ -435,9 +427,10 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
         auto const bbox_w = img.w * b.w;
         auto const bbox_h = img.h * b.h;
         auto shape = None;
-#ifdef OPENCV
-        shape = detector->detect_shape(crop_image(img, bbox_x, bbox_y, bbox_w, bbox_h));
-#endif
+//TODO: Need to Fix commented code 
+//#ifdef OPENCV
+//        shape = detector->detect_shape(crop_image(img, bbox_x, bbox_y, bbox_w, bbox_h));
+//#endif
         if (prob > thresh)
         {
             bbox_t bbox{};
@@ -461,8 +454,8 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
 
 LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh)
 {
-    auto& detector_gpu = *static_cast<detector_gpu_t*>(detector_gpu_ptr.get());
-    auto& net = detector_gpu.net;
+    auto &detector_gpu = *static_cast<detector_gpu_t*>(detector_gpu_ptr.get());
+    auto &net = detector_gpu.net;
     net.wait_stream = wait_stream;
     const auto l = net.layers[net.n - 1];
 
@@ -477,12 +470,13 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
     }
     else
         network_predict_gpu(net, img.data);
-
+    
     auto nboxes = 0;
     const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
-    if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-        auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
-
+    
+    if (nms)
+        do_nms_sort(dets, nboxes, l.classes, nms);
+    auto bbox_vec = save_bounding_boxes_into_vector(img, thresh, l, dets, nboxes);
     free_detections(dets, nboxes);
     return bbox_vec;
 }
@@ -582,8 +576,8 @@ shape_type Detector::detect_shape(image src) const
         approxPolyDP(cv::Mat(contour), approx, arcLength(cv::Mat(contour), true) * 0.02, true);
 
         // Skip small or non-convex objects 
-        //if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
-         //   continue;
+        /*if (std::fabs(contourArea(contours)) < 100 || !isContourConvex(approx))
+            continue;*/
 
         if (approx.size() == 3)
             type = Triangle;

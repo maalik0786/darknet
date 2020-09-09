@@ -36,7 +36,8 @@ void cuda_set_device(int n)
 {
     gpu_index = n;
     cudaError_t status = cudaSetDevice(n);
-    if(status != cudaSuccess) CHECK_CUDA(status);
+    if(status != cudaSuccess)
+        CHECK_CUDA(status);
 }
 
 int cuda_get_device()
