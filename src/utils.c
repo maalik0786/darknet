@@ -38,7 +38,6 @@ void *xcalloc(size_t nmemb, size_t size) {
     if(!ptr) {
         calloc_error();
     }
-    memset(ptr, 0, nmemb * size);
     return ptr;
 }
 
@@ -1030,4 +1029,15 @@ int make_directory(char *path, int mode)
 #else
     return mkdir(path, mode);
 #endif
+}
+
+unsigned long custom_hash(char *str)
+{
+    unsigned long hash = 5381;
+    int c;
+
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash;
 }

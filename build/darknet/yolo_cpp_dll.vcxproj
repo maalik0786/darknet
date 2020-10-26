@@ -52,7 +52,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)FastYolo\</OutDir>
     <IntDir>$(Platform)\DLL_$(Configuration)\</IntDir>
-    <LibraryPath>$(OPENCV_DIR)\$(PlatformName)\vc15\lib;$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(CUDNN)\lib$(OPENCV_DIR)\$(PlatformName)\vc15\lib;$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(LibraryPath)</LibraryPath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>true</RunCodeAnalysis>
     <CopyLocalDeploymentContent>false</CopyLocalDeploymentContent>
@@ -64,7 +64,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)</OutDir>
     <IntDir>$(Platform)\DLL_$(Configuration)\</IntDir>
-    <LibraryPath>$(OPENCV_DIR)\$(PlatformName)\vc16\lib;$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\$(PlatformName);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(CUDNN)\lib;$(OPENCV_DIR)\$(PlatformName)\vc16\lib;$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\$(PlatformName);$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -72,7 +72,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Custom</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\pthreads\include;..\..\3rdparty\stb\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CUDNN)\include;$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\pthreads\include;..\..\3rdparty\stb\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>GPU;CUDNN;CUDNN_HALF;_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UndefinePreprocessorDefinitions>OPENCV</UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

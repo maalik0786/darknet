@@ -4,7 +4,7 @@
 #include "network.h"
 #include "region_layer.h"
 
-extern "C" {
+extern "C"{
 #include "detection_layer.h"
 #include "utils.h"
 #include "parser.h"
@@ -42,7 +42,7 @@ int detect_image(const char* filename, bbox_t_container& container)
 
 int detect_objects(const float* data, const int width, const int height, const int channel, bbox_t_container& container)
 {
-    // ReSharper disable once CppCStyleCast
+    // ReSharper disable CppCStyleCast
     auto detection = detector->detect(image{width, height,  channel, (float*)data});
     for (size_t i = 0; i < detection.size() && i < C_SHARP_MAX_OBJECTS; ++i)
         container.candidates[i] = detection[i];
@@ -376,7 +376,8 @@ LIB_API std::vector<bbox_t> Detector::detect(const image_t img, const float thre
     const auto letterbox = 0;
     const float hier_thresh = 0.5;
     const auto dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, letterbox);
-    if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+    if (nms)
+        do_nms_sort(dets, nboxes, l.classes, nms);
 
     std::vector<bbox_t> bbox_vec;
 
@@ -427,10 +428,9 @@ std::vector<bbox_t> Detector::save_bounding_boxes_into_vector(const image img, c
         auto const bbox_w = img.w * b.w;
         auto const bbox_h = img.h * b.h;
         auto shape = None;
-//TODO: Need to Fix commented code 
-//#ifdef OPENCV
-//        shape = detector->detect_shape(crop_image(img, bbox_x, bbox_y, bbox_w, bbox_h));
-//#endif
+#ifdef OPENCV
+        shape = detector->detect_shape(crop_image(img, bbox_x, bbox_y, bbox_w, bbox_h));
+#endif
         if (prob > thresh)
         {
             bbox_t bbox{};
@@ -461,7 +461,6 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
 
     if (net.w != img.w && net.h != img.h)
     {
-        std::cout << "image is resizing from " << img.w << " x " << img.h << " to " << net.w << " x " << net.h << std::endl;
         didHaveToResizeImage = true;
         image sized = resize_image(img, net.w, net.h);
         network_predict_gpu(net, sized.data);
@@ -472,7 +471,7 @@ LIB_API std::vector<bbox_t> Detector::detect(const image img, const float thresh
         network_predict_gpu(net, img.data);
     
     auto nboxes = 0;
-    const auto dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, nullptr, 1, &nboxes, 0);
+    auto* const dets = get_network_boxes(&net, img.w, img.h, thresh, 0.5, 0, 1, &nboxes, 0);
     
     if (nms)
         do_nms_sort(dets, nboxes, l.classes, nms);
@@ -617,6 +616,8 @@ shape_type Detector::detect_shape(image src) const
                 type = Circle;
         }
     }
+    if (src.data)
+        free(src.data);
     return type;
 }
 

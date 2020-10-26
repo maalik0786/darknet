@@ -17,7 +17,7 @@
 #endif
 #endif
 
-#define C_SHARP_MAX_OBJECTS 100
+#define C_SHARP_MAX_OBJECTS 10
 
 struct bbox_t {
     unsigned int x, y, w, h;       // (x,y) - top-left corner, (w, h) - width & height of bounded box
@@ -53,12 +53,11 @@ struct bbox_t_container {
 #include <string>
 #include <iostream>
 #include <cmath>
-
+#include <darknet.h>
 #ifdef OPENCV
 #include <opencv2/opencv.hpp>            // C++
 #include <opencv2/imgproc/imgproc_c.h>   // C
 #endif
-#include <darknet.h>
 
 extern "C" LIB_API int init(const char *configuration_filename, const char *weights_filename, int gpu);
 extern "C" LIB_API int detect_image(const char *filename, bbox_t_container &container);
@@ -102,7 +101,7 @@ public:
     LIB_API int get_net_color_depth() const;
     bool didHaveToResizeImage;
 
-    LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool const change_history = true, int const frames_story = 30, int const max_dist = 40);
+    LIB_API std::vector<bbox_t> tracking_id(std::vector<bbox_t> cur_bbox_vec, bool change_history = true, int frames_story = 30, int max_dist = 40);
 
 #ifdef OPENCV
 		shape_type detect_shape(image src) const;

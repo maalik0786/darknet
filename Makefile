@@ -1,16 +1,18 @@
-GPU=1
-CUDNN=1
-CUDNN_HALF=1
-OPENCV=1
+GPU=0
+CUDNN=0
+CUDNN_HALF=0
+OPENCV=0
 AVX=0
 OPENMP=0
 LIBSO=0
-ZED_CAMERA=0 # ZED SDK 3.0 and above
-ZED_CAMERA_v2_8=0 # ZED SDK 2.X
+ZED_CAMERA=0
+ZED_CAMERA_v2_8=0
 
 # set GPU=1 and CUDNN=1 to speedup on GPU
 # set CUDNN_HALF=1 to further speedup 3 x times (Mixed-precision on Tensor Cores) GPU: Volta, Xavier, Turing and higher
 # set AVX=1 and OPENMP=1 to speedup on CPU (if error occurs then set AVX=0)
+# set ZED_CAMERA=1 to enable ZED SDK 3.0 and above
+# set ZED_CAMERA_v2_8=1 to enable ZED SDK 2.X
 
 USE_CPP=0
 DEBUG=0
@@ -22,6 +24,9 @@ ARCH= -gencode arch=compute_30,code=sm_30 \
 	    -gencode arch=compute_61,code=[sm_61,compute_61]
 
 OS := $(shell uname)
+
+# Tesla A100 (GA100), DGX-A100, RTX 3080
+# ARCH= -gencode arch=compute_80,code=[sm_80,compute_80]
 
 # Tesla V100
 # ARCH= -gencode arch=compute_70,code=[sm_70,compute_70]
@@ -39,7 +44,7 @@ OS := $(shell uname)
 # ARCH= -gencode arch=compute_60,code=sm_60
 
 # For Jetson TX1, Tegra X1, DRIVE CX, DRIVE PX - uncomment:
- ARCH= -gencode arch=compute_53,code=[sm_53,compute_53]
+# ARCH= -gencode arch=compute_53,code=[sm_53,compute_53]
 
 # For Jetson Tx2 or Drive-PX2 uncomment:
 # ARCH= -gencode arch=compute_62,code=[sm_62,compute_62]
@@ -50,7 +55,7 @@ EXEC=darknet
 OBJDIR=./obj/
 
 ifeq ($(LIBSO), 1)
-LIBNAMESO=libdarknet_arm.so
+LIBNAMESO=libdarknet.so
 APPNAMESO=uselib
 endif
 
@@ -92,7 +97,11 @@ COMMON+= `pkg-config --cflags opencv4 2> /dev/null || pkg-config --cflags opencv
 endif
 
 ifeq ($(OPENMP), 1)
-CFLAGS+= -fopenmp
+    ifeq ($(OS),Darwin) #MAC
+	    CFLAGS+= -Xpreprocessor -fopenmp
+	else
+		CFLAGS+= -fopenmp
+	endif
 LDFLAGS+= -lgomp
 endif
 

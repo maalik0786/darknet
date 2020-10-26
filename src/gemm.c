@@ -531,7 +531,7 @@ static inline __int32 _mm256_extract_epi32(__m256i a, const int index) {
 }
 #endif
 
-static inline float _castu32_f32(uint32_t a) {
+static inline float _dn_castu32_f32(uint32_t a) {
     return *((float *)&a);
 }
 
@@ -546,30 +546,30 @@ static inline float _mm256_extract_float32(__m256 a, const int index) {
 #include <smmintrin.h>
 #include <cpuid.h>
 
-static inline float _castu32_f32(uint32_t a) {
+static inline float _dn_castu32_f32(uint32_t a) {
     return *((float *)&a);
 }
 
 static inline float _mm256_extract_float32(__m256 a, const int index) {
     switch(index) {
     case 0:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 0));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 0));
     case 1:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 1));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 1));
     case 2:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 2));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 2));
     case 3:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 3));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 3));
     case 4:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 4));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 4));
     case 5:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 5));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 5));
     case 6:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 6));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 6));
     case 7:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 7));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 7));
     default:
-      return _castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 0));
+      return _dn_castu32_f32(_mm256_extract_epi32(_mm256_castps_si256(a), 0));
     }
 }
 
@@ -1031,7 +1031,7 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
     }
 
     //for (i = 0; i < w*h*c; i += 8) {
-        //*((__m256*)&input[i]) = _mm256_and_ps(*((__m256*)&input[i]), _mm256_castsi256_ps(all256_sing1));
+        //(*(__m256*)&input[i]) = _mm256_and_ps(*((__m256*)&input[i]), _mm256_castsi256_ps(all256_sing1));
     //}
 
 
@@ -1124,7 +1124,7 @@ void convolution_2d(int w, int h, int ksize, int n, int c, int pad, int stride,
 
                     //__m256 out = *((__m256*)&output[output_index]);
                     //out = _mm256_add_ps(out, sum256);
-                    //*((__m256*)&output[output_index]) = out;
+                    //(*(__m256*)&output[output_index]) = out;
                     *((__m256*)&output[output_index]) = sum256;
 
                     //_mm256_storeu_ps(&C[i*ldc + j], result256);

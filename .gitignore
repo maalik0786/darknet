@@ -52,16 +52,6 @@ src/version.h
 lib/
 share/
 include/darknet/
-*.log
-*.tlog
-x64/Release/ALL_BUILD/ALL_BUILD.vcxproj.FileListAbsolute.txt
-x64/
-*.user
-*.filters
-*.pdb
-darknet.dir/
-dark.dir/
-Release/
 uselib
 uselib_track
 darknet
