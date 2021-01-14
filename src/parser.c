@@ -1215,8 +1215,12 @@ void parse_net_options(list *options, network *net)
         char device_name[1024];
         int compute_capability = get_gpu_compute_capability(net->gpu_index, device_name);
 #ifdef CUDNN_HALF
-        if (compute_capability >= 700) net->cudnn_half = 1;
-        else net->cudnn_half = 0;
+        //Only turing GPU's 2070,2080 and Jetson Nano have tensor cores and have  fp16 support, the 1660 doesn't have any tensor core
+        //https://forums.developer.nvidia.com/t/compute-capability/110091/4
+        if (compute_capability >= 700 && strstr(device_name,"1660") == NULL) 
+            net->cudnn_half = 1; 
+        else
+            net->cudnn_half = 0;
 #endif// CUDNN_HALF
         fprintf(stderr, " %d : compute_capability = %d, cudnn_half = %d, GPU: %s \n", net->gpu_index, compute_capability, net->cudnn_half, device_name);
     }

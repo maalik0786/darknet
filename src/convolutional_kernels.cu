@@ -424,7 +424,7 @@ void forward_convolutional_layer_gpu(convolutional_layer l, network_state state)
     if (state.index != 0 && state.net.cudnn_half && !l.xnor && (!state.train || (iteration_num > 3 * state.net.burn_in) && state.net.loss_scale != 1) &&
         (l.c / l.groups) % 8 == 0 && l.n % 8 == 0 && l.groups <= 1 && l.size > 1)
     {
-        //printf("\n CUDNN_HALF!!! state.index = %d \n", state.index);
+        printf("\n CUDNN_HALF!!! state.index = %d \n", state.index);
 
         // Note: For improved performance it is advised to use beta[0] = 0.0.
         // For Tensor Core: cudnnSetConvolutionMathType() where cudnnMathType_t mathType = CUDNN_TENSOR_OP_MATH;
@@ -529,7 +529,6 @@ void forward_convolutional_layer_gpu(convolutional_layer l, network_state state)
         printf("\n is_nan_or_inf(l.weights_gpu) = %d \n", weights_nan_inf);
         if (weights_nan_inf) getchar();
         */
-
         CHECK_CUDNN(cudnnConvolutionForward(cudnn_handle(),
             &alpha, //&one,
             l.srcTensorDesc,
