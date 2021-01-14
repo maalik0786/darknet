@@ -40,7 +40,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.2.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -73,8 +73,9 @@
       <Optimization>Custom</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CUDNN)\include;$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\pthreads\include;..\..\3rdparty\stb\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>GPU;CUDNN;CUDNN_HALF;_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <UndefinePreprocessorDefinitions>OPENCV</UndefinePreprocessorDefinitions>
+      <PreprocessorDefinitions>GPU;OPENCV;CUDNN;CUDNN_HALF;_MBCS;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ForcedIncludeFiles>stdlib.h;crtdbg.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -98,14 +99,14 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OPENCV_DIR)\$(PlatformName)\vc16\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\$(PlatformName);$(cudnn)\lib\$(PlatformName);..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OPENCV_DIR)\$(PlatformName)\vc15\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\$(PlatformName);$(cudnn)\lib\$(PlatformName);..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <OutputFile>$(OutDir)\$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalDependencies>pthreadVC2.lib;cublas.lib;curand.lib;cudart.lib;cuda.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AssemblyDebug>true</AssemblyDebug>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_75,sm_75;</CodeGeneration>
+      <CodeGeneration>compute_75,sm_75;compute_62,sm_62;</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <FastMath>true</FastMath>
       <Optimization>O2</Optimization>
@@ -134,7 +135,7 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\De
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(OPENCV_DIR)\include;..\..\include;..\..\3rdparty\stb\include;..\..\3rdparty\pthreads\include;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDNN)\include;$(cudnn)\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>GPU;CUDNN;CUDNN_HALF;OPENCV;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GPU;CUDNN;CUDNN_HALF;OPENCV;LIB_EXPORTS;_TIMESPEC_DEFINED;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;CUDNN_HALF;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CLanguageStandard>c11</CLanguageStandard>
       <CppLanguageStandard>c++1y</CppLanguageStandard>
       <PrecompiledHeaderCompileAs>CompileAsCpp</PrecompiledHeaderCompileAs>
@@ -157,7 +158,7 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\De
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(OPENCV_DIR)\$(PlatformName)\vc16\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\$(PlatformName);$(cudnn)\lib\$(PlatformName);..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OPENCV_DIR)\$(PlatformName)\vc15\lib;$(CUDA_PATH)\lib\$(PlatformName);$(CUDNN)\lib\$(PlatformName);$(cudnn)\lib\$(PlatformName);..\..\3rdparty\pthreads\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>pthreadVC2.lib;cublas.lib;curand.lib;cudart.lib;cuda.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)..\FastYolo\$(TargetName)$(TargetExt)</OutputFile>
       <SuppressStartupBanner>false</SuppressStartupBanner>
@@ -333,6 +334,6 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\Re
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.2.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.targets" />
   </ImportGroup>
 </Project>
