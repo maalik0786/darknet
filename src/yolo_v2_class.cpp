@@ -69,7 +69,7 @@ int GetDetectorNetworkWidth()
 
 int GetDetectorNetworkHeight()
 {
-    return detector->get_net_width();
+    return detector->get_net_height();
 }
 
 std::string gstreamer_pipeline(int capture_width, int capture_height, int display_width, int display_height,
