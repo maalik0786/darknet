@@ -32,9 +32,9 @@
 #include "shortcut_layer.h"
 #include "blas.h"
 
-#ifdef OPENCV
-#include <opencv2/highgui/highgui_c.h>
-#endif
+//#ifdef OPENCV
+//#include <opencv2/highgui/highgui_c.h>
+//#endif
 
 #include "http_stream.h"
 
@@ -235,11 +235,24 @@ void backward_network_gpu(network net, network_state state)
         cuda_pull_array(original_input, original_input_cpu, img_size);
         cuda_pull_array(original_delta, original_delta_cpu, img_size);
 
-        image attention_img = make_attention_image(img_size, original_delta_cpu, original_input_cpu, net.w, net.h, net.c);
+        image attention_img = make_attention_image(img_size, original_delta_cpu, original_input_cpu, net.w, net.h, net.c, 0.7);
         show_image(attention_img, "attention_img");
         resize_window_cv("attention_img", 500, 500);
 
+        //static int img_counter = 0;
+        //img_counter++;
+        //char buff[256];
+        //sprintf(buff, "attention_img_%d.png", img_counter);
+        //save_image_png(attention_img, buff);
         free_image(attention_img);
+
+        image attention_mask_img = make_attention_image(img_size, original_delta_cpu, original_delta_cpu, net.w, net.h, net.c, 1.0);
+        show_image(attention_mask_img, "attention_mask_img");
+        resize_window_cv("attention_mask_img", 500, 500);
+
+        //sprintf(buff, "attention_mask_img_%d.png", img_counter);
+        //save_image_png(attention_mask_img, buff);
+        free_image(attention_mask_img);
 
         free(original_input_cpu);
         free(original_delta_cpu);
@@ -271,6 +284,8 @@ void update_network_gpu(network net)
     float rate = get_current_rate(net);
     for(i = 0; i < net.n; ++i){
         layer l = net.layers[i];
+        if (l.train == 0) continue;
+
         l.t = get_current_batch(net);
         if (iteration_num > (net.max_batches * 1 / 2)) l.deform = 0;
         if (l.burnin_update && (l.burnin_update*net.burn_in > iteration_num)) continue;
@@ -305,40 +320,37 @@ void forward_backward_network_gpu(network net, float *x, float *y)
     state.truth = *net.truth_gpu;
     state.train = 1;
 #if defined(CUDNN_HALF) && defined(CUDNN)
-    if (net.cudnn_half)
-    {
-        int i;
-        for (i = 0; i < net.n; ++i) {
-            layer l = net.layers[i];
-            if (net.cudnn_half){
-                if (l.type == CONVOLUTIONAL && l.weights_gpu && l.weights_gpu16) {
-                    assert((l.nweights) > 0);
-                    cuda_convert_f32_to_f16(l.weights_gpu, l.nweights, l.weights_gpu16);
+    int i;
+    for (i = 0; i < net.n; ++i) {
+        layer l = net.layers[i];
+        if (net.cudnn_half){
+            if (l.type == CONVOLUTIONAL && l.weights_gpu && l.weights_gpu16) {
+                assert((l.nweights) > 0);
+                cuda_convert_f32_to_f16(l.weights_gpu, l.nweights, l.weights_gpu16);
+            }
+            else if (l.type == CRNN && l.input_layer->weights_gpu && l.input_layer->weights_gpu16) {
+                assert((l.input_layer->c*l.input_layer->n*l.input_layer->size*l.input_layer->size) > 0);
+                cuda_convert_f32_to_f16(l.input_layer->weights_gpu, l.input_layer->nweights, l.input_layer->weights_gpu16);
+                cuda_convert_f32_to_f16(l.self_layer->weights_gpu, l.self_layer->nweights, l.self_layer->weights_gpu16);
+                cuda_convert_f32_to_f16(l.output_layer->weights_gpu, l.output_layer->nweights, l.output_layer->weights_gpu16);
+            }
+            else if (l.type == CONV_LSTM && l.wf->weights_gpu && l.wf->weights_gpu16) {
+                assert((l.wf->c * l.wf->n * l.wf->size * l.wf->size) > 0);
+                if (l.peephole) {
+                    cuda_convert_f32_to_f16(l.vf->weights_gpu, l.vf->nweights, l.vf->weights_gpu16);
+                    cuda_convert_f32_to_f16(l.vi->weights_gpu, l.vi->nweights, l.vi->weights_gpu16);
+                    cuda_convert_f32_to_f16(l.vo->weights_gpu, l.vo->nweights, l.vo->weights_gpu16);
                 }
-                else if (l.type == CRNN && l.input_layer->weights_gpu && l.input_layer->weights_gpu16) {
-                    assert((l.input_layer->c*l.input_layer->n*l.input_layer->size*l.input_layer->size) > 0);
-                    cuda_convert_f32_to_f16(l.input_layer->weights_gpu, l.input_layer->nweights, l.input_layer->weights_gpu16);
-                    cuda_convert_f32_to_f16(l.self_layer->weights_gpu, l.self_layer->nweights, l.self_layer->weights_gpu16);
-                    cuda_convert_f32_to_f16(l.output_layer->weights_gpu, l.output_layer->nweights, l.output_layer->weights_gpu16);
+                cuda_convert_f32_to_f16(l.wf->weights_gpu, l.wf->nweights, l.wf->weights_gpu16);
+                if (!l.bottleneck) {
+                    cuda_convert_f32_to_f16(l.wi->weights_gpu, l.wi->nweights, l.wi->weights_gpu16);
+                    cuda_convert_f32_to_f16(l.wg->weights_gpu, l.wg->nweights, l.wg->weights_gpu16);
+                    cuda_convert_f32_to_f16(l.wo->weights_gpu, l.wo->nweights, l.wo->weights_gpu16);
                 }
-                else if (l.type == CONV_LSTM && l.wf->weights_gpu && l.wf->weights_gpu16) {
-                    assert((l.wf->c * l.wf->n * l.wf->size * l.wf->size) > 0);
-                    if (l.peephole) {
-                        cuda_convert_f32_to_f16(l.vf->weights_gpu, l.vf->nweights, l.vf->weights_gpu16);
-                        cuda_convert_f32_to_f16(l.vi->weights_gpu, l.vi->nweights, l.vi->weights_gpu16);
-                        cuda_convert_f32_to_f16(l.vo->weights_gpu, l.vo->nweights, l.vo->weights_gpu16);
-                    }
-                    cuda_convert_f32_to_f16(l.wf->weights_gpu, l.wf->nweights, l.wf->weights_gpu16);
-                    if (!l.bottleneck) {
-                        cuda_convert_f32_to_f16(l.wi->weights_gpu, l.wi->nweights, l.wi->weights_gpu16);
-                        cuda_convert_f32_to_f16(l.wg->weights_gpu, l.wg->nweights, l.wg->weights_gpu16);
-                        cuda_convert_f32_to_f16(l.wo->weights_gpu, l.wo->nweights, l.wo->weights_gpu16);
-                    }
-                    cuda_convert_f32_to_f16(l.uf->weights_gpu, l.uf->nweights, l.uf->weights_gpu16);
-                    cuda_convert_f32_to_f16(l.ui->weights_gpu, l.ui->nweights, l.ui->weights_gpu16);
-                    cuda_convert_f32_to_f16(l.ug->weights_gpu, l.ug->nweights, l.ug->weights_gpu16);
-                    cuda_convert_f32_to_f16(l.uo->weights_gpu, l.uo->nweights, l.uo->weights_gpu16);
-                }
+                cuda_convert_f32_to_f16(l.uf->weights_gpu, l.uf->nweights, l.uf->weights_gpu16);
+                cuda_convert_f32_to_f16(l.ui->weights_gpu, l.ui->nweights, l.ui->weights_gpu16);
+                cuda_convert_f32_to_f16(l.ug->weights_gpu, l.ug->nweights, l.ug->weights_gpu16);
+                cuda_convert_f32_to_f16(l.uo->weights_gpu, l.uo->nweights, l.uo->weights_gpu16);
             }
         }
     }
@@ -351,7 +363,7 @@ void forward_backward_network_gpu(network net, float *x, float *y)
         cuda_free(state.delta);
         cuda_pull_array(*net.input_gpu, x, x_size);
     }
-    if(*state.net.total_bbox > 0)
+    if(*(state.net.total_bbox) > 0)
         fprintf(stderr, " total_bbox = %d, rewritten_bbox = %f %% \n", *(state.net.total_bbox), 100 * (float)*(state.net.rewritten_bbox) / *(state.net.total_bbox));
 }
 
@@ -377,7 +389,8 @@ float train_network_datum_gpu(network net, float *x, float *y)
 
         forward_backward_network_gpu(net, x, truth_cpu);
 
-        for (int b = 0; b < net.batch; ++b) {
+        int b;
+        for (b = 0; b < net.batch; ++b) {
             if (b % 2 == 1 && net.contrastive) {
                 //printf(" b = %d old img, ", b);
                 memcpy(x + img_size*b, old_input + img_size*b, img_size * sizeof(float));
@@ -666,7 +679,7 @@ float train_networks(network *nets, int n, data d, int interval)
 float *get_network_output_layer_gpu(network net, int i)
 {
     layer l = net.layers[i];
-    if(l.type != REGION) cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
+    if(l.type != REGION && l.type != YOLO && (*net.cuda_graph_ready) == 0) cuda_pull_array(l.output_gpu, l.output, l.outputs*l.batch);
     return l.output;
 }
 
@@ -688,12 +701,49 @@ float *network_predict_gpu(network net, float *input)
     //state.input = cuda_make_array(input, size);   // memory will be allocated in the parse_network_cfg_custom()
     state.input = net.input_state_gpu;
     memcpy(net.input_pinned_cpu, input, size * sizeof(float));
-    cuda_push_array(state.input, net.input_pinned_cpu, size);
     state.truth = 0;
     state.train = 0;
     state.delta = 0;
-    forward_network_gpu(net, state);
+
+    //cudaGraphExec_t instance = (cudaGraphExec_t)net.cuda_graph_exec;
+    static cudaGraphExec_t instance;
+
+    if ((*net.cuda_graph_ready) == 0) {
+        static cudaGraph_t graph;
+        if (net.use_cuda_graph == 1) {
+            int i;
+            for (i = 0; i < 16; ++i) switch_stream(i);
+
+            cudaStream_t stream0 = switch_stream(0);
+            CHECK_CUDA(cudaDeviceSynchronize());
+            printf("Try to capture graph... \n");
+            //cudaGraph_t graph = (cudaGraph_t)net.cuda_graph;
+            CHECK_CUDA(cudaStreamBeginCapture(stream0, cudaStreamCaptureModeGlobal));
+        }
+
+        cuda_push_array(state.input, net.input_pinned_cpu, size);
+        forward_network_gpu(net, state);
+
+        if (net.use_cuda_graph == 1) {
+            cudaStream_t stream0 = switch_stream(0);
+            CHECK_CUDA(cudaStreamEndCapture(stream0, &graph));
+            CHECK_CUDA(cudaGraphInstantiate(&instance, graph, NULL, NULL, 0));
+            (*net.cuda_graph_ready) = 1;
+            printf(" graph is captured... \n");
+            CHECK_CUDA(cudaDeviceSynchronize());
+        }
+        CHECK_CUDA(cudaStreamSynchronize(get_cuda_stream()));
+    }
+    else {
+        cudaStream_t stream0 = switch_stream(0);
+        //printf(" cudaGraphLaunch \n");
+        CHECK_CUDA( cudaGraphLaunch(instance, stream0) );
+        CHECK_CUDA( cudaStreamSynchronize(stream0) );
+        //printf(" ~cudaGraphLaunch \n");
+    }
+
     float *out = get_network_output_gpu(net);
+    reset_wait_stream_events();
     //cuda_free(state.input);   // will be freed in the free_network()
     return out;
 }

@@ -165,6 +165,16 @@ half *cuda_make_f16_from_f32_array(float *src, size_t n)
 
 void forward_convolutional_layer_gpu(convolutional_layer l, network_state state)
 {
+    if (l.train == 0) state.train = 0;
+
+    if (l.stream >= 0) {
+        switch_stream(l.stream);
+    }
+
+    if (l.wait_stream_id >= 0) {
+        wait_stream(l.wait_stream_id);
+    }
+
     //fill_ongpu(l.outputs*l.batch, 0, l.output_gpu, 1);
     if(l.binary){
         binarize_weights_gpu(l.weights_gpu, l.n, (l.c / l.groups)*l.size*l.size, l.binary_weights_gpu);
@@ -424,7 +434,7 @@ void forward_convolutional_layer_gpu(convolutional_layer l, network_state state)
     if (state.index != 0 && state.net.cudnn_half && !l.xnor && (!state.train || (iteration_num > 3 * state.net.burn_in) && state.net.loss_scale != 1) &&
         (l.c / l.groups) % 8 == 0 && l.n % 8 == 0 && l.groups <= 1 && l.size > 1)
     {
-        printf("\n CUDNN_HALF!!! state.index = %d \n", state.index);
+        //printf("\n CUDNN_HALF!!! state.index = %d \n", state.index);
 
         // Note: For improved performance it is advised to use beta[0] = 0.0.
         // For Tensor Core: cudnnSetConvolutionMathType() where cudnnMathType_t mathType = CUDNN_TENSOR_OP_MATH;
@@ -529,6 +539,7 @@ void forward_convolutional_layer_gpu(convolutional_layer l, network_state state)
         printf("\n is_nan_or_inf(l.weights_gpu) = %d \n", weights_nan_inf);
         if (weights_nan_inf) getchar();
         */
+
         CHECK_CUDNN(cudnnConvolutionForward(cudnn_handle(),
             &alpha, //&one,
             l.srcTensorDesc,
@@ -809,6 +820,7 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
         if (!state.net.adversarial && !l.train_only_bn) {
 
             float *old_input = state.input;
+
             /*
             if (l.reverse) {
                 if (*state.net.max_output16_size < l.inputs*l.batch) {
@@ -817,11 +829,13 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
                     assert(*state.net.max_output16_size > 0);
                     *state.net.output16_gpu = cuda_make_array(NULL, *state.net.max_output16_size);
                 }
-                mult_inverse_array_gpu(state.input, *state.net.output16_gpu, l.inputs*l.batch, l.reverse);
+                float clip = 0.0;
+                float divider = 1.0;
+                float abs_add = 1.0;
+                mult_inverse_array_gpu(state.input, *state.net.output16_gpu, l.inputs*l.batch, l.reverse, divider, clip, abs_add);
                 state.input = *state.net.output16_gpu;
             }
             */
-
 
             // calculate conv weight updates
             // if used: beta=1 then loss decreases faster
@@ -848,6 +862,7 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
 
             float *old_weights = l.weights_gpu;
 
+            /*
             if (l.reverse) {
                 if (*state.net.max_output16_size < l.nweights) {
                     *state.net.max_output16_size = l.nweights;
@@ -855,11 +870,13 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
                     assert(*state.net.max_output16_size > 0);
                     *state.net.output16_gpu = cuda_make_array(NULL, l.nweights);
                 }
-                mult_inverse_array_gpu(l.weights_gpu, *state.net.output16_gpu, l.nweights, l.reverse);
+                float clip = 0.0;
+                float divider = 1.0;
+                float abs_add = 1.0;
+                mult_inverse_array_gpu(l.weights_gpu, *state.net.output16_gpu, l.nweights, l.reverse, divider, clip, abs_add);
                 l.weights_gpu = *state.net.output16_gpu;
             }
-
-
+            */
 
             // http://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html#cudnnConvolutionBackwardData
             // calculate delta for the next layer
@@ -957,6 +974,8 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
         reset_nan_and_inf(l.weight_updates_gpu, size);
         fix_nan_and_inf(l.weights_gpu, size);
     }
+
+
 }
 
 __global__ void calc_avg_activation_kernel(float *src, float *dst, int size, int channels, int batches)
@@ -1086,10 +1105,10 @@ void assisted_excitation_forward_gpu(convolutional_layer l, network_state state)
             float dh = (1 - truth.h) * beta;
             //printf(" alpha = %f, beta = %f, truth.w = %f, dw = %f, tw+dw = %f, l.out_w = %d \n", alpha, beta, truth.w, dw, truth.w+dw, l.out_w);
 
-            int left = floor((truth.x - (dw + truth.w) / 2) * l.out_w);
-            int right = ceil((truth.x + (dw + truth.w) / 2) * l.out_w);
-            int top = floor((truth.y - (dh + truth.h) / 2) * l.out_h);
-            int bottom = ceil((truth.y + (dh + truth.h) / 2) * l.out_h);
+            int left = floorf((truth.x - (dw + truth.w) / 2) * l.out_w);
+            int right = ceilf((truth.x + (dw + truth.w) / 2) * l.out_w);
+            int top = floorf((truth.y - (dh + truth.h) / 2) * l.out_h);
+            int bottom = ceilf((truth.y + (dh + truth.h) / 2) * l.out_h);
             if (left < 0) left = 0;
             if (top < 0) top = 0;
             if (right > l.out_w) right = l.out_w;
@@ -1202,8 +1221,8 @@ void pull_convolutional_layer(convolutional_layer l)
 {
     cuda_pull_array_async(l.weights_gpu, l.weights, l.nweights);
     cuda_pull_array_async(l.biases_gpu, l.biases, l.n);
-    cuda_pull_array_async(l.weight_updates_gpu, l.weight_updates, l.nweights);
-    cuda_pull_array_async(l.bias_updates_gpu, l.bias_updates, l.n);
+    if (l.weight_updates_gpu) cuda_pull_array_async(l.weight_updates_gpu, l.weight_updates, l.nweights);
+    if (l.bias_updates_gpu) cuda_pull_array_async(l.bias_updates_gpu, l.bias_updates, l.n);
     if (l.batch_normalize){
         cuda_pull_array_async(l.scales_gpu, l.scales, l.n);
         cuda_pull_array_async(l.rolling_mean_gpu, l.rolling_mean, l.n);
@@ -1310,8 +1329,24 @@ void update_convolutional_layer_gpu(layer l, int batch, float learning_rate_init
         //axpy_ongpu(l.nweights, -decay*batch, l.weights_gpu, 1, l.weight_updates_gpu, 1);
         //axpy_ongpu(l.nweights, learning_rate / batch, l.weight_updates_gpu, 1, l.weights_gpu, 1);
         //scal_ongpu(l.nweights, momentum, l.weight_updates_gpu, 1);
+
+        float *old_weight_updates_gpu = l.weight_updates_gpu;
+
+
+        if (l.reverse) {
+            float clip = 0.0;
+            float divider = 1.0;
+            float abs_add = 1.0;
+            mult_inverse_array_gpu(l.weight_updates_gpu, l.output_gpu, l.inputs*l.batch, l.reverse, divider, clip, abs_add);
+            l.weight_updates_gpu = l.output_gpu;
+        }
+
+
         axpy_ongpu(l.nweights, -decay*batch*loss_scale, l.weights_gpu, 1, l.weight_updates_gpu, 1);
         axpy_ongpu(l.nweights, learning_rate / batch, l.weight_updates_gpu, 1, l.weights_gpu, 1);
+
+        l.weight_updates_gpu = old_weight_updates_gpu;
+
         scal_ongpu(l.nweights, momentum, l.weight_updates_gpu, 1);
 
         axpy_ongpu(l.n, learning_rate / batch, l.bias_updates_gpu, 1, l.biases_gpu, 1);

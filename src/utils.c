@@ -260,11 +260,17 @@ void find_replace_extension(char *str, char *orig, char *rep, char *output)
 
 void replace_image_to_label(const char* input_path, char* output_path)
 {
-    find_replace(input_path, "/images/train2014/", "/labels/train2014/", output_path);    // COCO
-    find_replace(output_path, "/images/val2014/", "/labels/val2014/", output_path);        // COCO
+    find_replace(input_path, "/images/train2017/", "/labels/train2017/", output_path);    // COCO
+    find_replace(output_path, "/images/val2017/", "/labels/val2017/", output_path);        // COCO
     find_replace(output_path, "/JPEGImages/", "/labels/", output_path);    // PascalVOC
+    find_replace(output_path, "\\images\\train2017\\", "\\labels\\train2017\\", output_path);    // COCO
+    find_replace(output_path, "\\images\\val2017\\", "\\labels\\val2017\\", output_path);        // COCO
+
     find_replace(output_path, "\\images\\train2014\\", "\\labels\\train2014\\", output_path);    // COCO
     find_replace(output_path, "\\images\\val2014\\", "\\labels\\val2014\\", output_path);        // COCO
+    find_replace(output_path, "/images/train2014/", "/labels/train2014/", output_path);    // COCO
+    find_replace(output_path, "/images/val2014/", "/labels/val2014/", output_path);        // COCO
+
     find_replace(output_path, "\\JPEGImages\\", "\\labels\\", output_path);    // PascalVOC
     //find_replace(output_path, "/images/", "/labels/", output_path);    // COCO
     //find_replace(output_path, "/VOC2007/JPEGImages/", "/VOC2007/labels/", output_path);        // PascalVOC
@@ -1040,4 +1046,9 @@ unsigned long custom_hash(char *str)
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
     return hash;
+}
+
+bool is_live_stream(const char * path){
+    const char *url_schema = "://";
+    return (NULL != strstr(path, url_schema));
 }

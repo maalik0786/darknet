@@ -32,11 +32,11 @@ __device__ float relu_activate_kernel(float x){return x*(x>0);}
 __device__ float relu6_activate_kernel(float x) { return min_val_cmp(max_val_cmp(x, 0), 6); }
 __device__ float elu_activate_kernel(float x){return (x >= 0)*x + (x < 0)*(expf(x)-1);}
 __device__ float selu_activate_kernel(float x) { return (x >= 0)*1.0507f*x + (x < 0)*1.0507f*1.6732f*(expf(x) - 1); }
-__device__ float relie_activate_kernel(float x){return x>0 ? x : .01f*x;}
+__device__ float relie_activate_kernel(float x){return (x>0) ? x : .01f*x;}
 __device__ float ramp_activate_kernel(float x){return x*(x>0)+.1f*x;}
-__device__ float leaky_activate_kernel(float x){return x>0 ? x : .1f*x;}
-__device__ float tanh_activate_kernel(float x){return 2/(1 + expf(-2*x)) - 1;}
-__device__ float gelu_activate_kernel(float x){return 0.5*x*(1 + tanhf(0.797885*x + 0.035677*powf(x, 3)));}
+__device__ float leaky_activate_kernel(float x){return (x>0) ? x : .1f*x;}
+__device__ float tanh_activate_kernel(float x){return (2/(1 + expf(-2*x)) - 1);}
+__device__ float gelu_activate_kernel(float x){return (0.5*x*(1 + tanhf(0.797885*x + 0.035677*powf(x, 3))));}
 __device__ float softplus_kernel(float x, float threshold = 20) {
     if (x > threshold) return x;                // too large
     else if (x < -threshold) return expf(x);    // too small
@@ -85,7 +85,7 @@ __device__ float gelu_gradient_kernel(float x) {
 __device__ float plse_gradient_kernel(float x){return (x < 0 || x > 1) ? .01f : .125f;}
 __device__ float stair_gradient_kernel(float x)
 {
-    if (floor(x) == x) return 0;
+    if (floorf(x) == x) return 0;
     return 1;
 }
 
@@ -412,8 +412,8 @@ __device__ float hard_mish_yashas_grad(float x)
 __global__ void gradient_array_hard_mish_kernel(int n, float *activation_input_gpu, float *delta)
 {
     int i = (blockIdx.x + blockIdx.y*gridDim.x) * blockDim.x + threadIdx.x;
-    if (i < n)
-    {
+    if (i < n) {
+
         const float x = activation_input_gpu[i];
         delta[i] *= hard_mish_yashas_grad(x);
     }

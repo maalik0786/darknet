@@ -96,7 +96,7 @@ unsigned char* get_image(const int capture_width, const int capture_height, cons
     {
 	std::cout << "pipeline is empty." << std::endl;
 	return nullptr;
-     }
+    }
 
 #if defined(__linux__)
     cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
