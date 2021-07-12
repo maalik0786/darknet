@@ -190,6 +190,7 @@
     <ClCompile Include="..\..\src\region_layer.c" />
     <ClCompile Include="..\..\src\reorg_layer.c" />
     <ClCompile Include="..\..\src\reorg_old_layer.c" />
+    <ClCompile Include="..\..\src\representation_layer.c" />
     <ClCompile Include="..\..\src\rnn.c" />
     <ClCompile Include="..\..\src\rnn_layer.c" />
     <ClCompile Include="..\..\src\rnn_vid.c" />

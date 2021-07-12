@@ -64,7 +64,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)</OutDir>
     <IntDir>$(Platform)\DLL_$(Configuration)\</IntDir>
-    <LibraryPath>$(CUDNN)\lib;$(OPENCV_DIR)\$(PlatformName)\vc16\lib;$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\$(PlatformName);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OPENCV_DIR)\$(PlatformName)\vc16\lib;$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\$(PlatformName);$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -106,7 +106,7 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_75,sm_75;compute_62,sm_62;</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61;compute_62,sm_62;compute_75,sm_75;compute_86,sm_86;</CodeGeneration>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <FastMath>true</FastMath>
       <Optimization>O2</Optimization>
@@ -165,7 +165,7 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\De
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_75,sm_75</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61;compute_62,sm_62;compute_75,sm_75;compute_86,sm_86;</CodeGeneration>
       <FastMath>true</FastMath>
       <Optimization>O2</Optimization>
       <Runtime>InheritFromHost</Runtime>
@@ -177,13 +177,13 @@ xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\De
     </CudaLink>
     <PostBuildEvent>
       <Command>xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\github\FastYolo\FastYolo\
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo\bin\Release\netcoreapp3.1\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo\bin\Release\net5.0\
 
 xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\github\FastYolo\FastYolo.Tests\
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.Tests\bin\Release\netcoreapp3.1\
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.Tests\bin\Release\net5.0\
 
 xcopy /y $(OutDir)yolo_cpp_dll.dll C:\Code\github\FastYolo\FastYolo.TestApp\
-xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\Release\netcoreapp3.1\</Command>
+xcopy /y $(OutDir)yolo_cpp_dll.* C:\Code\github\FastYolo\FastYolo.TestApp\bin\Release\net5.0\</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
